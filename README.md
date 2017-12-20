@@ -13,4 +13,4 @@ The grammar can be edited in grammar.txt.
 ## Instructions
 * Input the grammar in grammar.txt.
 * Run SLRParser.py.
-* Input tokens to be parsed. All tokens are separated by spaces.
+* Input the tokens to be parsed. All tokens are separated by spaces.
