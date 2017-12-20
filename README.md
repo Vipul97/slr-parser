@@ -9,7 +9,7 @@ The grammar can be edited in grammar.txt.
 * All symbols in the body of the production are separated by spaces. Multicharacter symbols can be used by not including spaces between the characters.
 * The choice operator ```|``` can be used in the body of the production to match either the expression before or the expression after the operator.
 
-### Instructions
+## Instructions
 * Input the grammar in grammar.txt.
 * Run SLRParser.py.
 * Input tokens to be parsed. All tokens are separated by spaces.
