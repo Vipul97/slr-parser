@@ -11,6 +11,6 @@ The grammar can be edited in grammar.txt.
 * The choice operator ```|``` can be used in the body of the production to match either the expression before or the expression after the operator.
 
 ## Instructions
-* Input the grammar in grammar.txt.
-* Run SLRParser.py.
-* Input the tokens to be parsed. All tokens are separated by spaces.
+1. Input the grammar in grammar.txt.
+2. Run SLRParser.py.
+3. Input the tokens to be parsed. All tokens are separated by spaces.
