@@ -1,79 +1,79 @@
-grammars = open("grammar.txt")
-
-G = {}
-C = {}
-start = ""
-terminals = []
-nonterminals = []
-symbols = []
-
-
 def parse_grammar():
-    global G, start, terminals, nonterminals, symbols
+    G_prime = {}
+    G_indexed = {}
+    start = ""
+    terminals = set([])
+    nonterminals = set([])
+    grammars = open("grammar.txt")
 
-    for line in grammars:
-        line = " ".join(line.split())
-        if line == '\n':
-            break
-        head = line[:line.index("->")].strip()
-        prods = [l.strip().split(' ') for l in ''.join(line[line.index("->") + 2:]).split('|')]
+    i = 1
+    for grammar in grammars:
+        if grammar == '\n':
+            continue
+
+        head = grammar.split()[0]
+        prods = ' '.join(grammar[grammar.index("->") + 2:].split()).split(' | ')
+
         if not start:
             start = head + "'"
-            G[start] = [[head]]
-            nonterminals.append(start)
-        if head not in G:
-            G[head] = []
-        if head not in nonterminals:
-            nonterminals.append(head)
-        for prod in prods:
-            G[head].append(prod)
-            for char in prod:
-                if not char.isupper() and char != '^' and char not in terminals:
-                    terminals.append(char)
-                elif char.isupper() and char not in nonterminals:
-                    nonterminals.append(char)
-                    G[char] = []
+            G_prime[start] = [head]
 
-    symbols = terminals + nonterminals
+        if head not in G_prime:
+            G_prime[head] = []
+            nonterminals.add(head)
+
+        for prod in prods:
+            G_prime[head].append(prod)
+            G_indexed[i] = head + " -> " + prod
+            i += 1
+
+            for symbol in prod.split():
+                if not symbol.isupper() and symbol != '^':
+                    terminals.add(symbol)
+                elif symbol.isupper():
+                    nonterminals.add(symbol)
+
+    return G_prime, G_indexed, start, [terminal for terminal in terminals], [nonterminal for nonterminal in
+                                                                             nonterminals], [symbol for symbol in
+                                                                                             terminals | nonterminals]
 
 
 first_seen = []
 
 
 def FIRST(X):
-    global first_seen
-    first = []
-
-    first_seen.append(X)
     if X in terminals:  # CASE 1
-        first.append(X)
-    elif X in nonterminals:
-        for prods in G[X]:  # CASE 2
-            if prods[0] in terminals and prods[0] not in first:
-                first.append(prods[0])
-            elif '^' in prods and '^' not in first:
-                first.append('^')
-            else:  # CASE 3
-                found_null = False
-                for nonterm in prods:
-                    found_null = False
-                    if nonterm not in first_seen:
-                        for terms in FIRST(nonterm):
-                            if terms == '^':
-                                found_null = True
-                            elif terms not in first:
-                                first.append(terms)
-                    if not found_null:
+        return {X}
+    else:
+        global first_seen
+
+        first = set([])
+        first_seen.append(X)
+
+        for prod in G_prime[X]:
+            if prod == ['^']:  # CASE 3
+                first.add('^')
+
+            else:  # CASE 2
+                for (i, symbol) in enumerate(prod.split()):
+                    if symbol not in first_seen:
+                        symbol_first = FIRST(symbol)
+
+                        for sf in symbol_first:
+                            if sf in terminals:
+                                first.add(sf)
+
+                        if '^' not in symbol_first:
+                            break
+                    else:
                         break
-                if found_null:
-                    first.append('^')
-                    for Gprods in G[X]:
-                        if X in Gprods and Gprods.index(X) + 1 < len(Gprods):
-                            for terms in FIRST(Gprods[Gprods.index(X) + 1]):
-                                if terms not in first:
-                                    first.append(terms)
-    first_seen.remove(X)
-    return first
+
+                    if i + 1 == len(prod):
+                        first.add('^')
+
+        first_seen.remove(X)
+
+        return first
 
 
 follow_seen = []
@@ -81,274 +81,252 @@ follow_seen = []
 
 def FOLLOW(A):
     global follow_seen
-    follow = []
 
+    follow = set([])
     follow_seen.append(A)
+
     if A == start:  # CASE 1
-        follow.append('$')
-    for heads in G.keys():
-        for prods in G[heads]:
-            follow_head = False
-            if A in prods:
-                next_symbol_pos = prods.index(A) + 1
-                if next_symbol_pos < len(prods):  # CASE 2
-                    for terms in FIRST(prods[next_symbol_pos]):
-                        if terms != '^':
-                            if terms not in follow:
-                                follow.append(terms)
-                        else:  # CASE 3
-                            follow_head = True
-                else:  # CASE 3
-                    follow_head = True
-                if follow_head and heads not in follow_seen:
-                    for terms in FOLLOW(heads):
-                        if terms not in follow:
-                            follow.append(terms)
+        follow.add('$')
+
+    for (heads, prods) in G_prime.items():
+        for prod in prods:
+            prod = prod.split()
+
+            if A in prod[:-1]:  # CASE 2
+                first = FIRST(prod[prod.index(A) + 1])
+                follow |= (first - set('^'))
+
+                if '^' in first and heads not in follow_seen:  # CASE 3
+                    follow |= FOLLOW(heads)
+
+            elif A in prod[-1]:  # CASE 3
+                if heads not in follow_seen:
+                    follow |= FOLLOW(heads)
+
     follow_seen.remove(A)
+
     return follow
 
 
-def closure(I):
+def CLOSURE(I):
     J = I
 
     while True:
-        item_len = len(J) + sum(len(v) for v in J.itervalues())
-        for heads in J.keys():
-            for prods in J[heads]:
-                dot_pos = prods.index('.')
-                if dot_pos + 1 < len(prods):
-                    prod_after_dot = prods[dot_pos + 1]
-                    if prod_after_dot in nonterminals:
-                        for prod in G[prod_after_dot]:
-                            if prod == ['^']:
-                                item = ["."]
-                            else:
-                                item = ["."] + prod
-                            if prod_after_dot not in J.keys():
-                                J[prod_after_dot] = [item]
-                            elif item not in J[prod_after_dot]:
-                                J[prod_after_dot].append(item)
-        if item_len == len(J) + sum(len(v) for v in J.itervalues()):
+        item_len = len(J)
+
+        for item in J.copy():
+            item = item.split()
+
+            if '.' in item[:-1]:
+                symbol_after_dot = item[item.index('.') + 1]
+
+                if symbol_after_dot in nonterminals:
+                    for prod in G_prime[symbol_after_dot]:
+                        J.add(symbol_after_dot + ' -> . ' + prod)
+
+        if item_len == len(J):
             return J
 
 
 def GOTO(I, X):
-    goto = {}
+    goto = set([])
 
-    for heads in I.keys():
-        for prods in I[heads]:
-            for i in range(len(prods) - 1):
-                if "." == prods[i] and X == prods[i + 1]:
-                    temp_prods = prods[:]
-                    temp_prods[i], temp_prods[i + 1] = temp_prods[i + 1], temp_prods[i]
-                    prod_closure = closure({heads: [temp_prods]})
-                    for keys in prod_closure:
-                        if keys not in goto.keys():
-                            goto[keys] = prod_closure[keys]
-                        elif prod_closure[keys] not in goto[keys]:
-                            for prod in prod_closure[keys]:
-                                goto[keys].append(prod)
+    for item in I:
+        item = item.split()
+
+        if '.' in item[:-1]:
+            dot_pos = item.index('.')
+
+            if item[dot_pos + 1] == X:
+                [goto.add(item) for item in CLOSURE({' '.join(item[:dot_pos] + [X] + ['.'] + item[dot_pos + 2:])})]
+
     return goto
 
 
 def items():
-    global C
-    i = 1
+    C = [CLOSURE({start + " -> . " + start[:-1]})]
 
-    C = {'I0': closure({start: [['.'] + G[start][0]]})}
     while True:
-        item_len = len(C) + sum(len(v) for v in C.itervalues())
-        for I in C.keys():
+        item_len = len(C)
+
+        for I in C.copy():
             for X in symbols:
-                if GOTO(C[I], X) and GOTO(C[I], X) not in C.values():
-                    C['I' + str(i)] = GOTO(C[I], X)
-                    i += 1
-        if item_len == len(C) + sum(len(v) for v in C.itervalues()):
-            return
+                if GOTO(I, X) and GOTO(I, X) not in C:
+                    C.append(GOTO(I, X))
+
+        if item_len == len(C):
+            return C
 
 
-def ACTION(i, a):
-    for heads in C['I' + str(i)]:
-        for prods in C['I' + str(i)][heads]:
-            for j in range(len(prods) - 1):
-                if prods[j] == '.' and prods[j + 1] == a:
-                    for k in range(len(C)):
-                        if GOTO(C['I' + str(i)], a) == C['I' + str(k)]:
-                            if a in terminals:
-                                if "r" in parse_table[i][terminals.index(a)]:
-                                    print "ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + str(terminals.index(a))
-                                    exit(1)
-                                parse_table[i][terminals.index(a)] = "s" + str(k)
-                            else:
-                                parse_table[i][len(terminals) + nonterminals.index(a)] = str(k)
-                            return "s" + str(k)
-    for heads in C['I' + str(i)]:
-        if heads != start:
-            for prods in C['I' + str(i)][heads]:
-                if prods[-1] == '.':
-                    k = 0
-                    for head in G.keys():
-                        for Gprods in G[head]:
-                            if head == heads and (Gprods == prods[:-1] or (Gprods == ['^'] and prods == ['.'])) and (a in terminals or a == '$'):
-                                for terms in FOLLOW(heads):
-                                    if terms == '$':
-                                        index = len(terminals)
-                                    else:
-                                        index = terminals.index(terms)
-                                    if "s" in parse_table[i][index]:
-                                        print "ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + str(terms)
-                                        exit(1)
-                                    elif parse_table[i][index] and parse_table[i][index] != "r" + str(k):
-                                        print "ERROR: Reduce-Reduce Conflict at State " + str(i) + ", Symbol " + str(terms)
-                                        exit(1)
-                                    parse_table[i][index] = "r" + str(k)
-                                return "r" + str(k)
-                            k += 1
-    if start in C['I' + str(i)] and G[start][0] + ['.'] in C['I' + str(i)][start]:
-        parse_table[i][len(terminals)] = "acc"
-        return "acc"
-    return ""
+def construct_table():
+    parse_table = {r: {c: '' for c in terminals + ['$'] + nonterminals} for r in range(len(C))}
+
+    for i in range(len(C)):
+        for a in terminals + ['$']:
+            for item in C[i]:
+                item = item.split()
+
+                if '.' in item[:-1] and a in terminals:  # CASE 1 a
+                    if item[item.index('.') + 1] == a:
+                        if "r" in parse_table[i][a]:
+                            print("ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + a)
+                            exit(1)
+
+                        parse_table[i][a] = "s" + str(C.index(GOTO(C[i], a)))
+                elif item[-1] == '.':  # CASE 1 b
+                    head = item[0]
+
+                    if head != start:
+                        idx = -1
+
+                        for j in G_indexed:
+                            if G_indexed[j] == ' '.join(item[:-1]):
+                                idx = str(j)
+
+                                break
+
+                        for f in FOLLOW(head):
+                            if "s" in parse_table[i][f]:
+                                print("ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + f)
+                                exit(1)
+
+                            elif parse_table[i][f] and parse_table[i][f] != "r" + idx:
+                                print("ERROR: Reduce-Reduce Conflict at State " + str(i) + ", Symbol " + f)
+                                exit(1)
+
+                            parse_table[i][f] = "r" + idx
+                    else:  # CASE 1 c
+                        parse_table[i]['$'] = "acc"
+
+        for A in nonterminals:  # CASE 2
+            j = GOTO(C[i], A)
+
+            if j in C:
+                parse_table[i][A] = C.index(j)
+
+    return parse_table
 
 
 def print_info():
-    print "GRAMMAR:"
-    for head in G.keys():
-        if head == start:
-            continue
-        print "{:>{width}} ->".format(head, width=len(max(G.keys(), key=len))),
-        num_prods = 0
-        for prods in G[head]:
-            if num_prods > 0:
-                print "|",
-            for prod in prods:
-                print prod,
-            num_prods += 1
-        print
-    print "\nAUGMENTED GRAMMAR:"
+    def print_border():
+        print(("+" + "-" * 8) * (len(symbols) + 2) + "+")
+
+    print("AUGMENTED GRAMMAR:")
+
     i = 0
-    for head in G.keys():
-        for prods in G[head]:
-            print "{:>{width}}:".format(str(i), width=len(str(sum(len(v) for v in G.itervalues()) - 1))),
-            print "{:>{width}} ->".format(head, width=len(max(G.keys(), key=len))),
-            for prod in prods:
-                print prod,
-            print
+    for (head, prods) in G_prime.items():
+        for prod in prods:
+            print("{:>{width}}:".format(str(i), width=len(str(sum(len(v) for v in G_prime.values()) - 1))), end=' ')
+            print("{:>{width}} ->".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
+            print(prod)
+
             i += 1
-    print "\nTERMINALS   :", terminals
-    print "NONTERMINALS:", nonterminals
-    print "SYMBOLS     :", symbols
-    print "\nFIRST:"
-    for head in G:
-        print "{:>{width}} =".format(head, width=len(max(G.keys(), key=len))),
-        print "{",
-        num_terms = 0
-        for terms in FIRST(head):
-            if num_terms > 0:
-                print ", ",
-            print terms,
-            num_terms += 1
-        print "}"
-    print "\nFOLLOW:"
-    for head in G:
-        print "{:>{width}} =".format(head, width=len(max(G.keys(), key=len))),
-        print "{",
-        num_terms = 0
-        for terms in FOLLOW(head):
-            if num_terms > 0:
-                print ", ",
-            print terms,
-            num_terms += 1
-        print "}"
-    print "\nITEMS:"
-    for i in range(len(C)):
-        print 'I' + str(i) + ':'
-        for keys in C['I' + str(i)]:
-            for prods in C['I' + str(i)][keys]:
-                print "{:>{width}} ->".format(keys, width=len(max(G.keys(), key=len))),
-                for prod in prods:
-                    print prod,
-                print
-        print
-    for i in range(len(parse_table)):
-        for j in symbols:
-            ACTION(i, j)
-    print "PARSING TABLE:"
-    print "+" + "--------+" * (len(terminals) + len(nonterminals) + 1)
-    print "|{:^8}|".format('STATE'),
-    for terms in terminals:
-        print "{:^7}|".format(terms),
-    print "{:^7}|".format("$"),
-    for nonterms in nonterminals:
-        if nonterms == start:
-            continue
-        print "{:^7}|".format(nonterms),
-    print "\n+" + "--------+" * (len(terminals) + len(nonterminals) + 1)
-    for i in range(len(parse_table)):
-        print "|{:^8}|".format(i),
-        for j in range(len(parse_table[i]) - 1):
-            print "{:^7}|".format(parse_table[i][j]),
-        print
-    print "+" + "--------+" * (len(terminals) + len(nonterminals) + 1)
+
+    print()
+    print("%13s" % "TERMINALS:", ', '.join(terminals))
+    print("%13s" % "NONTERMINALS:", ', '.join(nonterminals))
+    print("%13s" % "SYMBOLS:", ', '.join(symbols))
+
+    print("\nFIRST:")
+    for head in G_prime.keys():
+        print("{:>{width}} =".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
+        print("{ " + ', '.join(FIRST(head)) + " }")
+
+    print("\nFOLLOW:")
+    for head in G_prime.keys():
+        print("{:>{width}} =".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
+        print("{ " + ', '.join(FOLLOW(head)) + " }")
+
+    print("\nITEMS:")
+    for (i, items) in enumerate(C):
+        print('I' + str(i) + ':')
+
+        for item in items:
+            item = item.split()
+
+            print("{:>{width}}".format(item[0], width=len(max(G_prime.keys(), key=len))), end=' ')
+            print(' '.join(item[1:]))
+
+        print()
+
+    print("PARSING TABLE:")
+    print_border()
+    print("|{:^8}|".format('STATE'), end=' ')
+
+    for symbol in terminals + ['$'] + nonterminals:
+        print("{:^7}|".format(symbol), end=' ')
+
+    print()
+    print_border()
+
+    for r in range(len(C)):
+        print("|{:^8}|".format(r), end=' ')
+
+        for c in terminals + ['$'] + nonterminals:
+            print("{:^7}|".format(parse_table[r][c]), end=' ')
+
+        print()
+
+    print_border()
 
 
-def process_input():
-    get_input = raw_input("\nEnter Input: ")
-    to_parse = " ".join((get_input + " $").split()).split(" ")
+def LR_parser(w, parse_table):
+    def print_border():
+        print("+" + "-" * 8 + ("+" + "-" * 28) * 2 + "+" + "-" * 11 + "+")
+
+    buffer = (w + " $").split()
     pointer = 0
+    a = buffer[pointer]
     stack = ['0']
 
-    print "\n+--------+----------------------------+----------------------------+-----------+"
-    print "|{:^8}|{:^28}|{:^28}|{:^11}|".format("STEP", "STACK", "INPUT", "ACTION")
-    print "+--------+----------------------------+----------------------------+-----------+"
+    print()
+    print_border()
+    print("|{:^8}|{:^28}|{:^28}|{:^11}|".format("STEP", "STACK", "INPUT", "ACTION"))
+    print_border()
 
-    step = 1
+    step = 0
     while True:
-        curr_symbol = to_parse[pointer]
-        top_stack = int(stack[-1])
-        stack_content = ""
-        input_content = ""
-
-        print "|{:^8}|".format(step),
-        for i in stack:
-            stack_content += i
-        print "{:27}|".format(stack_content),
-        i = pointer
-        while i < len(to_parse):
-            input_content += to_parse[i]
-            i += 1
-        print "{:>26} | ".format(input_content),
-
+        s = int(stack[-1])
         step += 1
-        get_action = ACTION(top_stack, curr_symbol)
-        if "s" in get_action:
-            print "{:^9}|".format(get_action)
-            stack.append(curr_symbol)
-            stack.append(get_action[1:])
+
+        print("|{:^8}| {:27}| {:>26} | ".format(step, ''.join(stack), ''.join(buffer[pointer:])), end=' ')
+
+        if a not in parse_table[s].keys():
+            print("ERROR: Unrecognized Symbol", a, "|")
+
+            break
+
+        elif parse_table[s][a][0] == "s":
+            print("{:^9}|".format(parse_table[s][a]))
+
+            stack.append(a)
+            stack.append(parse_table[s][a][1:])
             pointer += 1
-        elif "r" in get_action:
-            print "{:^9}|".format(get_action)
-            i = 0
-            for head in G.keys():
-                for prods in G[head]:
-                    if i == int(get_action[1:]):
-                        if prods != '^':
-                            for j in range(2 * len(prods)):
-                                stack.pop()
-                        state = stack[-1]
-                        stack.append(head)
-                        stack.append(parse_table[int(state)][len(terminals) + nonterminals.index(head)])
-                    i += 1
-        elif get_action == "acc":
-            print "{:^9}|".format("ACCEPTED")
+            a = buffer[pointer]
+
+        elif parse_table[s][a][0] == "r":
+            print("{:^9}|".format(parse_table[s][a]))
+
+            grammar = G_indexed[int(parse_table[s][a][1:])].split()
+
+            if grammar[-1] != '^':
+                stack = stack[:-(2 * len(grammar[grammar.index('->') + 1:]))]
+                s = int(stack[-1])
+                head = grammar[0]
+                stack.append(head)
+                stack.append(str(parse_table[s][head]))
+
+        elif parse_table[s][a] == "acc":
+            print("{:^9}|".format("ACCEPTED"))
+
             break
-        else:
-            print "ERROR: Unrecognized symbol", curr_symbol, "|"
-            break
-    print "+--------+----------------------------+----------------------------+-----------+"
+
+    print_border()
 
 
-parse_grammar()
-items()
-parse_table = [["" for c in range(len(terminals) + len(nonterminals) + 1)] for r in range(len(C))]
+G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar()
+C = items()
+parse_table = construct_table()
 print_info()
-process_input()
+
+LR_parser(input("\nEnter Input: "), parse_table)
