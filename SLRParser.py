@@ -329,8 +329,7 @@ def LR_parser(w, parse_table):
         elif parse_table[s][a][0] == "s":
             print("{:^9}|".format(parse_table[s][a]))
 
-            stack.append(a)
-            stack.append(parse_table[s][a][1:])
+            stack += [a, parse_table[s][a][1:]]
             pointer += 1
             a = buffer[pointer]
 
@@ -341,10 +340,8 @@ def LR_parser(w, parse_table):
 
             if grammar[-1] != '^':
                 stack = stack[:-(2 * len(grammar[grammar.index('->') + 1:]))]
-                s = int(stack[-1])
                 head = grammar[0]
-                stack.append(head)
-                stack.append(str(parse_table[s][head]))
+                stack += [head, str(parse_table[int(stack[-1])][head])]
 
         elif parse_table[s][a] == "acc":
             print("{:^9}|".format("ACCEPTED"))
