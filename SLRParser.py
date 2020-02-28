@@ -58,7 +58,7 @@ def FIRST(X):
                 first.add('^')
 
             else:  # CASE 2
-                for (i, symbol) in enumerate(prod.split()):
+                for i, symbol in enumerate(prod.split()):
                     if symbol not in first_seen:
                         symbol_first = FIRST(symbol)
 
@@ -164,17 +164,17 @@ def items():
 def construct_table():
     parse_table = {r: {c: '' for c in terminals + ['$'] + nonterminals} for r in range(len(C))}
 
-    for i in range(len(C)):
+    for i, items in enumerate(C):
         for a in terminals + ['$']:
-            for item in C[i]:
+            for item in items:
                 item = item.split()
 
                 if '.' in item[:-1] and a in terminals:  # CASE 1 a
                     if item[item.index('.') + 1] == a:
                         if "r" in parse_table[i][a]:
-                            parse_table[i][a] += "/s" + str(C.index(GOTO(C[i], a)))
+                            parse_table[i][a] += "/s" + str(C.index(GOTO(items, a)))
                         else:
-                            parse_table[i][a] = "s" + str(C.index(GOTO(C[i], a)))
+                            parse_table[i][a] = "s" + str(C.index(GOTO(items, a)))
 
                 elif item[-1] == '.':  # CASE 1 b
                     head = item[0]
@@ -195,7 +195,7 @@ def construct_table():
                         parse_table[i]['$'] = "acc"
 
         for A in nonterminals:  # CASE 2
-            j = GOTO(C[i], A)
+            j = GOTO(items, A)
 
             if j in C:
                 parse_table[i][A] = C.index(j)
@@ -255,7 +255,7 @@ def print_info():
 
     automaton = Digraph('automaton', node_attr={'shape': 'record'})
 
-    for (i, items) in enumerate(C):
+    for i, items in enumerate(C):
         I = '<<I>I</I><SUB>' + str(i) + '</SUB><BR/>'
 
         for item in items:
