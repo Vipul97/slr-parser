@@ -180,20 +180,17 @@ def construct_table():
                     head = item[0]
 
                     if head != start:
-                        idx = -1
-
                         for j in G_indexed:
                             if G_indexed[j] == ' '.join(item[:-1]):
-                                idx = str(j)
+                                for f in FOLLOW(head):
+                                    if parse_table[i][f]:
+                                        if "r" + str(j) not in parse_table[i][f]:
+                                            parse_table[i][f] += "/r" + str(j)
+                                    else:
+                                        parse_table[i][f] = "r" + str(j)
 
                                 break
 
-                        for f in FOLLOW(head):
-                            if parse_table[i][f]:
-                                if "r" + idx not in parse_table[i][f]:
-                                    parse_table[i][f] += "/r" + idx
-                            else:
-                                parse_table[i][f] = "r" + idx
                     else:  # CASE 1 c
                         parse_table[i]['$'] = "acc"
 
