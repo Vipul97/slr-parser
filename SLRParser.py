@@ -1,3 +1,6 @@
+import sys
+
+
 def parse_grammar():
     G_prime = {}
     G_indexed = {}
@@ -170,7 +173,7 @@ def construct_table():
                     if item[item.index('.') + 1] == a:
                         if "r" in parse_table[i][a]:
                             print("ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + a)
-                            exit(1)
+                            sys.exit(1)
 
                         parse_table[i][a] = "s" + str(C.index(GOTO(C[i], a)))
                 elif item[-1] == '.':  # CASE 1 b
@@ -188,11 +191,11 @@ def construct_table():
                         for f in FOLLOW(head):
                             if "s" in parse_table[i][f]:
                                 print("ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + f)
-                                exit(1)
+                                sys.exit(1)
 
                             elif parse_table[i][f] and parse_table[i][f] != "r" + idx:
                                 print("ERROR: Reduce-Reduce Conflict at State " + str(i) + ", Symbol " + f)
-                                exit(1)
+                                sys.exit(1)
 
                             parse_table[i][f] = "r" + idx
                     else:  # CASE 1 c
