@@ -1,6 +1,9 @@
 # SLR-Parser
 Implementation of Simple LR (SLR) Parser in Python 3.7.
 
+## Dependencies
+* Graphviz
+
 ## Grammar
 The grammar can be edited in grammar.txt.
 
