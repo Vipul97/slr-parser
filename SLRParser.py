@@ -1,6 +1,3 @@
-import sys
-
-
 def parse_grammar():
     G_prime = {}
     G_indexed = {}
@@ -172,10 +169,9 @@ def construct_table():
                 if '.' in item[:-1] and a in terminals:  # CASE 1 a
                     if item[item.index('.') + 1] == a:
                         if "r" in parse_table[i][a]:
-                            print("ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + a)
-                            sys.exit(1)
-
-                        parse_table[i][a] = "s" + str(C.index(GOTO(C[i], a)))
+                            parse_table[i][a] += "/s" + str(C.index(GOTO(C[i], a)))
+                        else:
+                            parse_table[i][a] = "s" + str(C.index(GOTO(C[i], a)))
                 elif item[-1] == '.':  # CASE 1 b
                     head = item[0]
 
@@ -189,15 +185,11 @@ def construct_table():
                                 break
 
                         for f in FOLLOW(head):
-                            if "s" in parse_table[i][f]:
-                                print("ERROR: Shift-Reduce Conflict at State " + str(i) + ", Symbol " + f)
-                                sys.exit(1)
-
-                            elif parse_table[i][f] and parse_table[i][f] != "r" + idx:
-                                print("ERROR: Reduce-Reduce Conflict at State " + str(i) + ", Symbol " + f)
-                                sys.exit(1)
-
-                            parse_table[i][f] = "r" + idx
+                            if parse_table[i][f]:
+                                if "r" + idx not in parse_table[i][f]:
+                                    parse_table[i][f] += "/r" + idx
+                            else:
+                                parse_table[i][f] = "r" + idx
                     else:  # CASE 1 c
                         parse_table[i]['$'] = "acc"
 
@@ -296,6 +288,19 @@ def LR_parser(w, parse_table):
 
         if a not in parse_table[s].keys():
             print("ERROR: Unrecognized Symbol", a, "|")
+
+            break
+
+        elif not parse_table[s][a]:
+            print("ERROR: Input Cannot be Parsed by Given Grammar |")
+
+            break
+
+        elif "/" in parse_table[s][a]:
+            if parse_table[s][a][0] == 'r' and parse_table[s][a][parse_table[s][a].index('/') + 1] == 'r':
+                print("ERROR: Reduce-Reduce Conflict at State " + str(s) + ", Symbol " + a, "|")
+            else:
+                print("ERROR: Shift-Reduce Conflict at State " + str(s) + ", Symbol " + a, "|")
 
             break
 
