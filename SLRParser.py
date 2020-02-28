@@ -1,3 +1,6 @@
+from graphviz import Digraph
+
+
 def parse_grammar():
     G_prime = {}
     G_indexed = {}
@@ -172,6 +175,7 @@ def construct_table():
                             parse_table[i][a] += "/s" + str(C.index(GOTO(C[i], a)))
                         else:
                             parse_table[i][a] = "s" + str(C.index(GOTO(C[i], a)))
+
                 elif item[-1] == '.':  # CASE 1 b
                     head = item[0]
 
@@ -232,19 +236,7 @@ def print_info():
         print("{:>{width}} =".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
         print("{ " + ', '.join(FOLLOW(head)) + " }")
 
-    print("\nITEMS:")
-    for (i, items) in enumerate(C):
-        print('I' + str(i) + ':')
-
-        for item in items:
-            item = item.split()
-
-            print("{:>{width}}".format(item[0], width=len(max(G_prime.keys(), key=len))), end=' ')
-            print(' '.join(item[1:]))
-
-        print()
-
-    print("PARSING TABLE:")
+    print("\nPARSING TABLE:")
     print_border()
     print("|{:^8}|".format('STATE'), end=' ')
 
@@ -263,6 +255,36 @@ def print_info():
         print()
 
     print_border()
+
+    automaton = Digraph('automaton', node_attr={'shape': 'record'})
+
+    for (i, items) in enumerate(C):
+        I = '<<I>I</I><SUB>' + str(i) + '</SUB><BR/>'
+
+        for item in items:
+            item = item.split()
+            I += "{:>{width}}".format(item[0], width=len(max(G_prime.keys(), key=len))) + ' &#8594;' + ' '.join(
+                item[2:]) + '<BR ALIGN="LEFT"/>'
+            automaton.node('I' + str(i), I + '>')
+
+    for r in range(len(C)):
+        for c in terminals + ['$'] + nonterminals:
+            if isinstance(parse_table[r][c], int):
+                automaton.edge('I' + str(r), 'I' + str(parse_table[r][c]), label='<<I>' + c + '</I>>')
+
+            elif 's' in parse_table[r][c]:
+                i = parse_table[r][c][parse_table[r][c].index('s') + 1:]
+
+                if '/' in i:
+                    i = i[:i.index('/')]
+
+                automaton.edge('I' + str(r), 'I' + i, label=c)
+
+            elif parse_table[r][c] == "acc":
+                automaton.node('acc', '<<B>accept</B>>', shape='none')
+                automaton.edge('I' + str(r), 'acc', label='$')
+
+    automaton.view()
 
 
 def LR_parser(w, parse_table):
