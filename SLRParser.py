@@ -141,7 +141,7 @@ def GOTO(I, X):
             dot_pos = item.index('.')
 
             if item[dot_pos + 1] == X:
-                [goto.add(item) for item in CLOSURE({' '.join(item[:dot_pos] + [X] + ['.'] + item[dot_pos + 2:])})]
+                [goto.add(item) for item in CLOSURE({' '.join(item[:dot_pos] + [X, '.'] + item[dot_pos + 2:])})]
 
     return goto
 
