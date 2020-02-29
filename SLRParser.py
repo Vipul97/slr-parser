@@ -4,10 +4,10 @@ from graphviz import Digraph
 def parse_grammar():
     G_prime = {}
     G_indexed = {}
-    start = ""
+    start = ''
     terminals = set([])
     nonterminals = set([])
-    grammars = open("grammar.txt")
+    grammars = open('grammar.txt')
 
     i = 1
     for grammar in grammars:
@@ -15,10 +15,10 @@ def parse_grammar():
             continue
 
         head = grammar.split()[0]
-        prods = ' '.join(grammar[grammar.index("->") + 2:].split()).split(' | ')
+        prods = ' '.join(grammar[grammar.index('->') + 2:].split()).split(' | ')
 
         if not start:
-            start = head + "'"
+            start = f"{head}'"
             G_prime[start] = [head]
 
         if head not in G_prime:
@@ -27,7 +27,7 @@ def parse_grammar():
 
         for prod in prods:
             G_prime[head].append(prod)
-            G_indexed[i] = head + " -> " + prod
+            G_indexed[i] = f'{head} -> {prod}'
             i += 1
 
             for symbol in prod.split():
@@ -35,6 +35,8 @@ def parse_grammar():
                     terminals.add(symbol)
                 elif symbol.isupper():
                     nonterminals.add(symbol)
+
+    grammars.close()
 
     return G_prime, G_indexed, start, [terminal for terminal in terminals], [nonterminal for nonterminal in
                                                                              nonterminals], [symbol for symbol in
@@ -125,7 +127,7 @@ def CLOSURE(I):
 
                 if symbol_after_dot in nonterminals:
                     for prod in G_prime[symbol_after_dot]:
-                        J.add(symbol_after_dot + ' -> . ' + prod)
+                        J.add(f'{symbol_after_dot} -> . {prod}')
 
         if item_len == len(J):
             return J
@@ -147,7 +149,7 @@ def GOTO(I, X):
 
 
 def items():
-    C = [CLOSURE({start + " -> . " + start[:-1]})]
+    C = [CLOSURE({f'{start} -> . {start[:-1]}'})]
 
     while True:
         item_len = len(C)
@@ -171,10 +173,10 @@ def construct_table():
 
                 if '.' in item[:-1] and a in terminals:  # CASE 1 a
                     if item[item.index('.') + 1] == a:
-                        if "r" in parse_table[i][a]:
-                            parse_table[i][a] += "/s" + str(C.index(GOTO(items, a)))
+                        if 'r' in parse_table[i][a]:
+                            parse_table[i][a] += f'/s{C.index(GOTO(items, a))}'
                         else:
-                            parse_table[i][a] = "s" + str(C.index(GOTO(items, a)))
+                            parse_table[i][a] = f's{C.index(GOTO(items, a))}'
 
                 elif item[-1] == '.':  # CASE 1 b
                     head = item[0]
@@ -184,15 +186,15 @@ def construct_table():
                             if G_indexed[j] == ' '.join(item[:-1]):
                                 for f in FOLLOW(head):
                                     if parse_table[i][f]:
-                                        if "r" + str(j) not in parse_table[i][f]:
-                                            parse_table[i][f] += "/r" + str(j)
+                                        if f'r{j}' not in parse_table[i][f]:
+                                            parse_table[i][f] += f'/r{j}'
                                     else:
-                                        parse_table[i][f] = "r" + str(j)
+                                        parse_table[i][f] = f'r{j}'
 
                                 break
 
                     else:  # CASE 1 c
-                        parse_table[i]['$'] = "acc"
+                        parse_table[i]['$'] = 'acc'
 
         for A in nonterminals:  # CASE 2
             j = GOTO(items, A)
@@ -205,49 +207,46 @@ def construct_table():
 
 def print_info():
     def print_border():
-        print(("+" + "-" * 8) * (len(symbols) + 2) + "+")
+        print(('+' + '-' * 8) * (len(symbols) + 2) + '+')
 
-    print("AUGMENTED GRAMMAR:")
+    print('AUGMENTED GRAMMAR:')
 
     i = 0
     for (head, prods) in G_prime.items():
         for prod in prods:
-            print("{:>{width}}:".format(str(i), width=len(str(sum(len(v) for v in G_prime.values()) - 1))), end=' ')
-            print("{:>{width}} ->".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
-            print(prod)
+            print(
+                f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{len(max(G_prime.keys(), key=len))}} -> {prod}')
 
             i += 1
 
     print()
-    print("%13s" % "TERMINALS:", ', '.join(terminals))
-    print("%13s" % "NONTERMINALS:", ', '.join(nonterminals))
-    print("%13s" % "SYMBOLS:", ', '.join(symbols))
+    print(f'{"TERMINALS:":>13} {", ".join(terminals)}')
+    print(f'{"NONTERMINALS:":>13} {", ".join(nonterminals)}')
+    print(f'{"SYMBOLS:":>13} {", ".join(symbols)}')
 
-    print("\nFIRST:")
+    print('\nFIRST:')
     for head in G_prime.keys():
-        print("{:>{width}} =".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
-        print("{ " + ', '.join(FIRST(head)) + " }")
+        print(f'{head:>{len(max(G_prime.keys(), key=len))}} = {{ {", ".join(FIRST(head))} }}')
 
-    print("\nFOLLOW:")
+    print('\nFOLLOW:')
     for head in G_prime.keys():
-        print("{:>{width}} =".format(head, width=len(max(G_prime.keys(), key=len))), end=' ')
-        print("{ " + ', '.join(FOLLOW(head)) + " }")
+        print(f'{head:>{len(max(G_prime.keys(), key=len))}} = {{ {", ".join(FOLLOW(head))} }}')
 
-    print("\nPARSING TABLE:")
+    print('\nPARSING TABLE:')
     print_border()
-    print("|{:^8}|".format('STATE'), end=' ')
+    print(f'|{"STATE":^8}|', end=' ')
 
     for symbol in terminals + ['$'] + nonterminals:
-        print("{:^7}|".format(symbol), end=' ')
+        print(f'{symbol:^7}|', end=' ')
 
     print()
     print_border()
 
     for r in range(len(C)):
-        print("|{:^8}|".format(r), end=' ')
+        print(f'|{r:^8}|', end=' ')
 
         for c in terminals + ['$'] + nonterminals:
-            print("{:^7}|".format(parse_table[r][c]), end=' ')
+            print(f'{parse_table[r][c]:^7}|', end=' ')
 
         print()
 
@@ -256,18 +255,17 @@ def print_info():
     automaton = Digraph('automaton', node_attr={'shape': 'record'})
 
     for i, items in enumerate(C):
-        I = '<<I>I</I><SUB>' + str(i) + '</SUB><BR/>'
+        I = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
         for item in items:
             item = item.split()
-            I += "{:>{width}}".format(item[0], width=len(max(G_prime.keys(), key=len))) + ' &#8594;' + ' '.join(
-                item[2:]) + '<BR ALIGN="LEFT"/>'
-            automaton.node('I' + str(i), I + '>')
+            I += f'{item[0]:>{len(max(G_prime.keys(), key=len))}} &#8594; {" ".join(item[2:])} <BR ALIGN="LEFT"/>'
+            automaton.node(f'I{i}', f'{I}>')
 
     for r in range(len(C)):
         for c in terminals + ['$'] + nonterminals:
             if isinstance(parse_table[r][c], int):
-                automaton.edge('I' + str(r), 'I' + str(parse_table[r][c]), label='<<I>' + c + '</I>>')
+                automaton.edge(f'I{r}', f'I{parse_table[r][c]}', label=f'<<I>{c}</I>>')
 
             elif 's' in parse_table[r][c]:
                 i = parse_table[r][c][parse_table[r][c].index('s') + 1:]
@@ -275,27 +273,27 @@ def print_info():
                 if '/' in i:
                     i = i[:i.index('/')]
 
-                automaton.edge('I' + str(r), 'I' + i, label=c)
+                automaton.edge(f'I{r}', f'I{i}', label=c)
 
-            elif parse_table[r][c] == "acc":
+            elif parse_table[r][c] == 'acc':
                 automaton.node('acc', '<<B>accept</B>>', shape='none')
-                automaton.edge('I' + str(r), 'acc', label='$')
+                automaton.edge(f'I{r}', 'acc', label='$')
 
     automaton.view()
 
 
 def LR_parser(w, parse_table):
     def print_border():
-        print("+" + "-" * 8 + ("+" + "-" * 28) * 2 + "+" + "-" * 11 + "+")
+        print('+' + '-' * 8 + ('+' + '-' * 28) * 2 + '+' + '-' * 11 + '+')
 
-    buffer = (w + " $").split()
+    buffer = f'{w} $'.split()
     pointer = 0
     a = buffer[pointer]
     stack = ['0']
 
     print()
     print_border()
-    print("|{:^8}|{:^28}|{:^28}|{:^11}|".format("STEP", "STACK", "INPUT", "ACTION"))
+    print(f'|{"STEP":^8}|{"STACK":^28}|{"INPUT":^28}|{"ACTION":^11}|')
     print_border()
 
     step = 0
@@ -303,35 +301,35 @@ def LR_parser(w, parse_table):
         s = int(stack[-1])
         step += 1
 
-        print("|{:^8}| {:27}| {:>26} | ".format(step, ''.join(stack), ''.join(buffer[pointer:])), end=' ')
+        print(f'|{step:^8}| {"".join(stack):27}| {"".join(buffer[pointer:]):>26} | ', end=' ')
 
         if a not in parse_table[s].keys():
-            print("ERROR: Unrecognized Symbol", a, "|")
+            print(f'ERROR: Unrecognized Symbol {a} |')
 
             break
 
         elif not parse_table[s][a]:
-            print("ERROR: Input Cannot be Parsed by Given Grammar |")
+            print('ERROR: Input Cannot be Parsed by Given Grammar |')
 
             break
 
-        elif "/" in parse_table[s][a]:
-            if parse_table[s][a][0] == 'r' and parse_table[s][a][parse_table[s][a].index('/') + 1] == 'r':
-                print("ERROR: Reduce-Reduce Conflict at State " + str(s) + ", Symbol " + a, "|")
+        elif '/' in parse_table[s][a]:
+            if parse_table[s][a].startswith('r') and parse_table[s][a][parse_table[s][a].index('/') + 1] == 'r':
+                print(f'ERROR: Reduce-Reduce Conflict at State {s}, Symbol {a} |')
             else:
-                print("ERROR: Shift-Reduce Conflict at State " + str(s) + ", Symbol " + a, "|")
+                print(f'ERROR: Shift-Reduce Conflict at State {s}, Symbol {a} |')
 
             break
 
-        elif parse_table[s][a][0] == "s":
-            print("{:^9}|".format(parse_table[s][a]))
+        elif parse_table[s][a].startswith('s'):
+            print(f'{parse_table[s][a]:^9}|')
 
             stack += [a, parse_table[s][a][1:]]
             pointer += 1
             a = buffer[pointer]
 
-        elif parse_table[s][a][0] == "r":
-            print("{:^9}|".format(parse_table[s][a]))
+        elif parse_table[s][a].startswith('r'):
+            print(f'{parse_table[s][a]:^9}|')
 
             grammar = G_indexed[int(parse_table[s][a][1:])].split()
 
@@ -340,8 +338,8 @@ def LR_parser(w, parse_table):
                 head = grammar[0]
                 stack += [head, str(parse_table[int(stack[-1])][head])]
 
-        elif parse_table[s][a] == "acc":
-            print("{:^9}|".format("ACCEPTED"))
+        elif parse_table[s][a] == 'acc':
+            print(f'{"ACCEPTED":^9}|')
 
             break
 
@@ -353,4 +351,4 @@ C = items()
 parse_table = construct_table()
 print_info()
 
-LR_parser(input("\nEnter Input: "), parse_table)
+LR_parser(input('\nEnter Input: '), parse_table)
