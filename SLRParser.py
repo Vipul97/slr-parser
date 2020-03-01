@@ -160,35 +160,36 @@ def construct_table():
     parse_table = {r: {c: '' for c in terminals + ['$'] + nonterminals} for r in range(len(C))}
 
     for i, I in enumerate(C):
-        for a in terminals + ['$']:
-            for item in I:
-                head = ' '.join(item[:item.index('->')])
-                prod = item[item.index('->') + 1:]
+        for item in I:
+            head = ' '.join(item[:item.index('->')])
+            prod = item[item.index('->') + 1:]
 
-                if '.' in prod[:-1] and a in terminals and prod[
-                    prod.index('.') + 1] == a and f's{C.index(GOTO(I, a))}' not in parse_table[i][a]:  # CASE 1 a
-                    if 'r' in parse_table[i][a]:
-                        parse_table[i][a] += '/'
+            if '.' in prod[:-1]:  # CASE 2 a
+                symbol_after_dot = prod[prod.index('.') + 1]
 
-                    parse_table[i][a] += f's{C.index(GOTO(I, a))}'
+                if symbol_after_dot in terminals and f's{C.index(GOTO(I, symbol_after_dot))}' not in parse_table[i][
+                    symbol_after_dot]:
+                    if 'r' in parse_table[i][symbol_after_dot]:
+                        parse_table[i][symbol_after_dot] += '/'
 
-                elif prod[-1] == '.':  # CASE 1 b
-                    if head != start:
-                        for j, (G_head, G_prod) in enumerate(G_indexed):
-                            if head == G_head and G_prod == prod[:-1]:
-                                for f in FOLLOW(head):
-                                    if parse_table[i][f]:
-                                        if f'r{j}' not in parse_table[i][f]:
-                                            parse_table[i][f] += f'/r{j}'
-                                    else:
-                                        parse_table[i][f] = f'r{j}'
+                    parse_table[i][symbol_after_dot] += f's{C.index(GOTO(I, symbol_after_dot))}'
 
-                                break
+            elif prod[-1] == '.' and head != start:  # CASE 2 b
+                for j, (G_head, G_prod) in enumerate(G_indexed):
+                    if head == G_head and G_prod == prod[:-1]:
+                        for f in FOLLOW(head):
+                            if parse_table[i][f]:
+                                if f'r{j}' not in parse_table[i][f]:
+                                    parse_table[i][f] += f'/r{j}'
+                            else:
+                                parse_table[i][f] = f'r{j}'
 
-                    else:  # CASE 1 c
-                        parse_table[i]['$'] = 'acc'
+                        break
 
-        for A in nonterminals:  # CASE 2
+            else:  # CASE 2 c
+                parse_table[i]['$'] = 'acc'
+
+        for A in nonterminals:  # CASE 3
             j = GOTO(I, A)
 
             if j in C:
@@ -280,10 +281,10 @@ def print_info():
     automaton.view()
 
 
-def LR_parser(w, parse_table):
+def LR_parser(w):
     def print_line():
         print('+' + '-' * (max_step + 2) + '+' + '-' * (max_stack + 2) + '+' + '-' * (max_symbols + 2) + '+' + '-' * (
-                    max_input + 2) + '+' + '-' * (max_action + 2) + '+')
+                max_input + 2) + '+' + '-' * (max_action + 2) + '+')
 
     buffer = f'{w} $'.split()
     pointer = 0
@@ -348,7 +349,7 @@ def LR_parser(w, parse_table):
 
             break
 
-    max_step = max(len(str(step)) for step in step_history)
+    max_step = max(len(step) for step in step_history)
     max_stack = max(len(stack) for stack in stack_history)
     max_symbols = max(len(symbols) for symbols in symbols_history)
     max_input = max(len(input) for input in input_history)
@@ -369,4 +370,4 @@ C = items()
 parse_table = construct_table()
 print_info()
 
-LR_parser(input('\nEnter Input: '), parse_table)
+LR_parser(input('\nEnter Input: '))
