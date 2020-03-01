@@ -91,7 +91,7 @@ def FOLLOW(A):
     if A == start:  # CASE 1
         follow.add('$')
 
-    for (head, prods) in G_prime.items():
+    for head, prods in G_prime.items():
         for prod in prods:
             if A in prod[:-1]:  # CASE 2
                 first = FIRST(prod[prod.index(A) + 1])
@@ -115,34 +115,44 @@ def CLOSURE(I):
     while True:
         item_len = len(J)
 
-        for item in J.copy():
-            if '.' in item[:-1]:
-                symbol_after_dot = item[item.index('.') + 1]
+        for head, prods in J.copy().items():
+            for prod in prods:
+                if '.' in prod[:-1]:
+                    symbol_after_dot = prod[prod.index('.') + 1]
 
-                if symbol_after_dot in nonterminals:
-                    for prod in G_prime[symbol_after_dot]:
-                        if [symbol_after_dot, '->', '.'] + prod not in J:
-                            J.append([symbol_after_dot, '->', '.'] + prod)
+                    if symbol_after_dot in nonterminals:
+                        for G_prod in G_prime[symbol_after_dot]:
+                            if symbol_after_dot not in J.keys():
+                                J[symbol_after_dot] = [['.'] + G_prod]
+                            elif ['.'] + G_prod not in J[symbol_after_dot]:
+                                J[symbol_after_dot].append(['.'] + G_prod)
 
         if item_len == len(J):
             return J
 
 
 def GOTO(I, X):
-    goto = []
+    goto = {}
 
-    for item in I:
-        if '.' in item[:-1]:
-            dot_pos = item.index('.')
+    for head, prods in I.items():
+        for prod in prods:
+            if '.' in prod[:-1]:
+                dot_pos = prod.index('.')
 
-            if item[dot_pos + 1] == X:
-                [goto.append(item) for item in CLOSURE([item[:dot_pos] + [X, '.'] + item[dot_pos + 2:]])]
+                if prod[dot_pos + 1] == X:
+                    for C_head, C_prods in CLOSURE({head: [prod[:dot_pos] + [X, '.'] + prod[dot_pos + 2:]]}).items():
+                        if C_head not in goto.keys():
+                            goto[C_head] = C_prods
+                        else:
+                            for C_prod in C_prods:
+                                if C_prod not in goto[C_head]:
+                                    goto[C_head].append(C_prod)
 
     return goto
 
 
 def items():
-    C = [CLOSURE([[start, '->', '.', start[:-1]]])]
+    C = [CLOSURE({start: [['.'] + [start[:-1]]]})]
 
     while True:
         item_len = len(C)
@@ -160,34 +170,32 @@ def construct_table():
     parse_table = {r: {c: '' for c in terminals + ['$'] + nonterminals} for r in range(len(C))}
 
     for i, I in enumerate(C):
-        for item in I:
-            head = ' '.join(item[:item.index('->')])
-            prod = item[item.index('->') + 1:]
+        for head, prods in I.items():
+            for prod in prods:
+                if '.' in prod[:-1]:  # CASE 2 a
+                    symbol_after_dot = prod[prod.index('.') + 1]
 
-            if '.' in prod[:-1]:  # CASE 2 a
-                symbol_after_dot = prod[prod.index('.') + 1]
+                    if symbol_after_dot in terminals and f's{C.index(GOTO(I, symbol_after_dot))}' not in parse_table[i][
+                        symbol_after_dot]:
+                        if 'r' in parse_table[i][symbol_after_dot]:
+                            parse_table[i][symbol_after_dot] += '/'
 
-                if symbol_after_dot in terminals and f's{C.index(GOTO(I, symbol_after_dot))}' not in parse_table[i][
-                    symbol_after_dot]:
-                    if 'r' in parse_table[i][symbol_after_dot]:
-                        parse_table[i][symbol_after_dot] += '/'
+                        parse_table[i][symbol_after_dot] += f's{C.index(GOTO(I, symbol_after_dot))}'
 
-                    parse_table[i][symbol_after_dot] += f's{C.index(GOTO(I, symbol_after_dot))}'
+                elif prod[-1] == '.' and head != start:  # CASE 2 b
+                    for j, (G_head, G_prod) in enumerate(G_indexed):
+                        if head == G_head and G_prod == prod[:-1]:
+                            for f in FOLLOW(head):
+                                if parse_table[i][f]:
+                                    if f'r{j}' not in parse_table[i][f]:
+                                        parse_table[i][f] += f'/r{j}'
+                                else:
+                                    parse_table[i][f] = f'r{j}'
 
-            elif prod[-1] == '.' and head != start:  # CASE 2 b
-                for j, (G_head, G_prod) in enumerate(G_indexed):
-                    if head == G_head and G_prod == prod[:-1]:
-                        for f in FOLLOW(head):
-                            if parse_table[i][f]:
-                                if f'r{j}' not in parse_table[i][f]:
-                                    parse_table[i][f] += f'/r{j}'
-                            else:
-                                parse_table[i][f] = f'r{j}'
+                            break
 
-                        break
-
-            else:  # CASE 2 c
-                parse_table[i]['$'] = 'acc'
+                else:  # CASE 2 c
+                    parse_table[i]['$'] = 'acc'
 
         for A in nonterminals:  # CASE 3
             j = GOTO(I, A)
@@ -207,7 +215,7 @@ def print_info():
     print('AUGMENTED GRAMMAR:')
 
     i = 0
-    for (head, prods) in G_prime.items():
+    for head, prods in G_prime.items():
         for prod in prods:
             print(
                 f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{max_G_prime}} -> {" ".join(prod)}')
@@ -254,12 +262,10 @@ def print_info():
     for i, I in enumerate(C):
         I_str = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
-        for item in I:
-            head = ' '.join(item[:item.index('->')])
-            prod = item[item.index('->') + 1:]
-
-            I_str += f'{head:>{max_G_prime}} &#8594; {" ".join(prod)} <BR ALIGN="LEFT"/>'
-            automaton.node(f'I{i}', f'{I_str}>')
+        for (head, prods) in I.items():
+            for prod in prods:
+                I_str += f'{head:>{max_G_prime}} &#8594; {" ".join(prod)} <BR ALIGN="LEFT"/>'
+                automaton.node(f'I{i}', f'{I_str}>')
 
     for r in range(len(C)):
         for c in terminals + ['$'] + nonterminals:
