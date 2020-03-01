@@ -169,21 +169,20 @@ def construct_table():
     for i, items in enumerate(C):
         for a in terminals + ['$']:
             for item in items:
-                item = item.split()
+                head, _, prod = item.partition(' -> ')
+                prod = prod.split()
 
-                if '.' in item[:-1] and a in terminals:  # CASE 1 a
-                    if item[item.index('.') + 1] == a:
+                if '.' in prod[:-1] and a in terminals:  # CASE 1 a
+                    if prod[prod.index('.') + 1] == a:
                         if 'r' in parse_table[i][a]:
                             parse_table[i][a] += f'/s{C.index(GOTO(items, a))}'
                         else:
                             parse_table[i][a] = f's{C.index(GOTO(items, a))}'
 
-                elif item[-1] == '.':  # CASE 1 b
-                    head = item[0]
-
+                elif prod[-1] == '.':  # CASE 1 b
                     if head != start:
                         for j in G_indexed:
-                            if G_indexed[j] == ' '.join(item[:-1]):
+                            if G_indexed[j] == ' '.join(prod[:-1]):
                                 for f in FOLLOW(head):
                                     if parse_table[i][f]:
                                         if f'r{j}' not in parse_table[i][f]:
@@ -262,7 +261,7 @@ def print_info():
         I = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
         for item in items:
-            head, _, prod = item.partition('->')
+            head, _, prod = item.partition(' -> ')
             I += f'{head:>{max_G_prime}} &#8594; {prod} <BR ALIGN="LEFT"/>'
             automaton.node(f'I{i}', f'{I}>')
 
