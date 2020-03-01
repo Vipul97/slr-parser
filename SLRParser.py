@@ -27,7 +27,9 @@ def parse_grammar():
 
         for prod in prods:
             G_prime[head].append(prod)
-            G_indexed[i] = f'{head} -> {prod}'
+            G_indexed[i] = {}
+            G_indexed[i][head] = prod.split()
+
             i += 1
 
             for symbol in prod.split():
@@ -120,37 +122,33 @@ def CLOSURE(I):
         item_len = len(J)
 
         for item in J.copy():
-            item = item.split()
-
             if '.' in item[:-1]:
                 symbol_after_dot = item[item.index('.') + 1]
 
                 if symbol_after_dot in nonterminals:
                     for prod in G_prime[symbol_after_dot]:
-                        J.add(f'{symbol_after_dot} -> . {prod}')
+                        if [symbol_after_dot, '->', '.'] + prod.split() not in J:
+                            J.append([symbol_after_dot, '->', '.'] + prod.split())
 
         if item_len == len(J):
             return J
 
 
 def GOTO(I, X):
-    goto = set([])
+    goto = []
 
     for item in I:
-        item = item.split()
-
         if '.' in item[:-1]:
             dot_pos = item.index('.')
 
             if item[dot_pos + 1] == X:
-                [goto.add(item) for item in CLOSURE({' '.join(item[:dot_pos] + [X, '.'] + item[dot_pos + 2:])})]
+                [goto.append(item) for item in CLOSURE([item[:dot_pos] + [X, '.'] + item[dot_pos + 2:]])]
 
     return goto
 
 
 def items():
-    C = [CLOSURE({f'{start} -> . {start[:-1]}'})]
-
+    C = [CLOSURE([[start, '->', '.', start[:-1]]])]
     while True:
         item_len = len(C)
 
@@ -166,23 +164,23 @@ def items():
 def construct_table():
     parse_table = {r: {c: '' for c in terminals + ['$'] + nonterminals} for r in range(len(C))}
 
-    for i, items in enumerate(C):
+    for i, I in enumerate(C):
         for a in terminals + ['$']:
-            for item in items:
-                head, _, prod = item.partition(' -> ')
-                prod = prod.split()
+            for item in I:
+                head = ' '.join(item[:item.index('->')])
+                prod = item[item.index('->') + 1:]
 
                 if '.' in prod[:-1] and a in terminals:  # CASE 1 a
                     if prod[prod.index('.') + 1] == a:
                         if 'r' in parse_table[i][a]:
-                            parse_table[i][a] += f'/s{C.index(GOTO(items, a))}'
+                            parse_table[i][a] += f'/s{C.index(GOTO(I, a))}'
                         else:
-                            parse_table[i][a] = f's{C.index(GOTO(items, a))}'
+                            parse_table[i][a] = f's{C.index(GOTO(I, a))}'
 
                 elif prod[-1] == '.':  # CASE 1 b
                     if head != start:
                         for j in G_indexed:
-                            if G_indexed[j] == ''.join(item[:-2]):
+                            if head in G_indexed[j].keys() and G_indexed[j][head] == prod[:-1]:
                                 for f in FOLLOW(head):
                                     if parse_table[i][f]:
                                         if f'r{j}' not in parse_table[i][f]:
@@ -196,7 +194,7 @@ def construct_table():
                         parse_table[i]['$'] = 'acc'
 
         for A in nonterminals:  # CASE 2
-            j = GOTO(items, A)
+            j = GOTO(I, A)
 
             if j in C:
                 parse_table[i][A] = C.index(j)
@@ -257,13 +255,15 @@ def print_info():
 
     automaton = Digraph('automaton', node_attr={'shape': 'record'})
 
-    for i, items in enumerate(C):
-        I = f'<<I>I</I><SUB>{i}</SUB><BR/>'
+    for i, I in enumerate(C):
+        I_str = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
-        for item in items:
-            head, _, prod = item.partition(' -> ')
-            I += f'{head:>{max_G_prime}} &#8594; {prod} <BR ALIGN="LEFT"/>'
-            automaton.node(f'I{i}', f'{I}>')
+        for item in I:
+            head = ' '.join(item[:item.index('->')])
+            prod = item[item.index('->') + 1:]
+
+            I_str += f'{head:>{max_G_prime}} &#8594; {" ".join(prod)} <BR ALIGN="LEFT"/>'
+            automaton.node(f'I{i}', f'{I_str}>')
 
     for r in range(len(C)):
         for c in terminals + ['$'] + nonterminals:
@@ -318,7 +318,7 @@ def LR_parser(w, parse_table):
             break
 
         elif '/' in parse_table[s][a]:
-            if parse_table[s][a].count('r') == 2:
+            if parse_table[s][a].count('r') > 1:
                 action_history.append(f'ERROR: Reduce-Reduce Conflict at State {s}, Symbol {a}')
             else:
                 action_history.append(f'ERROR: Shift-Reduce Conflict at State {s}, Symbol {a}')
@@ -334,13 +334,12 @@ def LR_parser(w, parse_table):
 
         elif parse_table[s][a].startswith('r'):
             action_history.append(parse_table[s][a])
-            head, _, prod = G_indexed[int(parse_table[s][a][1:])].partition(' -> ')
-            prod = prod.split()
 
-            if prod[-1] != '^':
-                stack = stack[:-(2 * len(prod))]
-                stack += [head, str(parse_table[int(stack[-1])][head])]
-                stack_history.append(''.join(stack))
+            for head, prod in G_indexed[int(parse_table[s][a][1:])].items():
+                if prod[-1] != '^':
+                    stack = stack[:-(2 * len(prod))]
+                    stack += [head, str(parse_table[int(stack[-1])][head])]
+                    stack_history.append(''.join(stack))
 
         elif parse_table[s][a] == 'acc':
             action_history.append('ACCEPTED')
