@@ -15,11 +15,11 @@ def parse_grammar():
             continue
 
         head, _, prods = grammar.partition(' -> ')
-        prods = ' '.join(prods.split()).split(' | ')
+        prods = [a.split() for a in ' '.join(prods.split()).split('|')]
 
         if not start:
             start = f"{head}'"
-            G_prime[start] = [head]
+            G_prime[start] = [[head]]
 
         if head not in G_prime:
             G_prime[head] = []
@@ -28,11 +28,11 @@ def parse_grammar():
         for prod in prods:
             G_prime[head].append(prod)
             G_indexed[i] = {}
-            G_indexed[i][head] = prod.split()
+            G_indexed[i][head] = prod
 
             i += 1
 
-            for symbol in prod.split():
+            for symbol in prod:
                 if not symbol.isupper() and symbol != '^':
                     terminals.add(symbol)
                 elif symbol.isupper():
@@ -62,7 +62,7 @@ def FIRST(X):
                 first.add('^')
 
             else:  # CASE 2
-                for i, symbol in enumerate(prod.split()):
+                for i, symbol in enumerate(prod):
                     if symbol not in first_seen:
                         symbol_first = FIRST(symbol)
 
@@ -97,8 +97,6 @@ def FOLLOW(A):
 
     for (heads, prods) in G_prime.items():
         for prod in prods:
-            prod = prod.split()
-
             if A in prod[:-1]:  # CASE 2
                 first = FIRST(prod[prod.index(A) + 1])
                 follow |= (first - set('^'))
@@ -127,8 +125,8 @@ def CLOSURE(I):
 
                 if symbol_after_dot in nonterminals:
                     for prod in G_prime[symbol_after_dot]:
-                        if [symbol_after_dot, '->', '.'] + prod.split() not in J:
-                            J.append([symbol_after_dot, '->', '.'] + prod.split())
+                        if [symbol_after_dot, '->', '.'] + prod not in J:
+                            J.append([symbol_after_dot, '->', '.'] + prod)
 
         if item_len == len(J):
             return J
@@ -214,7 +212,7 @@ def print_info():
     for (head, prods) in G_prime.items():
         for prod in prods:
             print(
-                f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{max_G_prime}} -> {prod}')
+                f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{max_G_prime}} -> {" ".join(prod)}')
 
             i += 1
 
