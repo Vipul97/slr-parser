@@ -182,7 +182,7 @@ def construct_table():
                 elif prod[-1] == '.':  # CASE 1 b
                     if head != start:
                         for j in G_indexed:
-                            if G_indexed[j] == ' '.join(prod[:-1]):
+                            if G_indexed[j] == ''.join(item[:-2]):
                                 for f in FOLLOW(head):
                                     if parse_table[i][f]:
                                         if f'r{j}' not in parse_table[i][f]:
@@ -334,11 +334,11 @@ def LR_parser(w, parse_table):
 
         elif parse_table[s][a].startswith('r'):
             action_history.append(parse_table[s][a])
-            grammar = G_indexed[int(parse_table[s][a][1:])].split()
+            head, _, prod = G_indexed[int(parse_table[s][a][1:])].partition(' -> ')
+            prod = prod.split()
 
-            if grammar[-1] != '^':
-                stack = stack[:-(2 * len(grammar[grammar.index('->') + 1:]))]
-                head = grammar[0]
+            if prod[-1] != '^':
+                stack = stack[:-(2 * len(prod))]
                 stack += [head, str(parse_table[int(stack[-1])][head])]
                 stack_history.append(''.join(stack))
 
