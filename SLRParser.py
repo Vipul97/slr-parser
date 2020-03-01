@@ -14,8 +14,8 @@ def parse_grammar():
         if grammar == '\n':
             continue
 
-        head = grammar.split()[0]
-        prods = ' '.join(grammar[grammar.index('->') + 2:].split()).split(' | ')
+        head, _, prods = grammar.partition(' -> ')
+        prods = ' '.join(prods.split()).split(' | ')
 
         if not start:
             start = f"{head}'"
@@ -318,7 +318,7 @@ def LR_parser(w, parse_table):
             break
 
         elif '/' in parse_table[s][a]:
-            if parse_table[s][a].startswith('r') and parse_table[s][a][parse_table[s][a].index('/') + 1] == 'r':
+            if parse_table[s][a].count('r') == 2:
                 action_history.append(f'ERROR: Reduce-Reduce Conflict at State {s}, Symbol {a}')
             else:
                 action_history.append(f'ERROR: Shift-Reduce Conflict at State {s}, Symbol {a}')
