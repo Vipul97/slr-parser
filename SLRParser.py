@@ -206,8 +206,10 @@ def construct_table():
 
 
 def print_info():
-    def print_border():
-        print(('+' + '-' * 8) * (len(symbols) + 2) + '+')
+    def print_line():
+        print(('+' + '-' * (width + 1)) * (len(symbols) + 2) + '+')
+
+    max_G_prime = len(max(G_prime.keys(), key=len))
 
     print('AUGMENTED GRAMMAR:')
 
@@ -215,7 +217,7 @@ def print_info():
     for (head, prods) in G_prime.items():
         for prod in prods:
             print(
-                f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{len(max(G_prime.keys(), key=len))}} -> {prod}')
+                f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{max_G_prime}} -> {prod}')
 
             i += 1
 
@@ -226,31 +228,33 @@ def print_info():
 
     print('\nFIRST:')
     for head in G_prime.keys():
-        print(f'{head:>{len(max(G_prime.keys(), key=len))}} = {{ {", ".join(FIRST(head))} }}')
+        print(f'{head:>{max_G_prime}} = {{ {", ".join(FIRST(head))} }}')
 
     print('\nFOLLOW:')
     for head in G_prime.keys():
-        print(f'{head:>{len(max(G_prime.keys(), key=len))}} = {{ {", ".join(FOLLOW(head))} }}')
+        print(f'{head:>{max_G_prime}} = {{ {", ".join(FOLLOW(head))} }}')
+
+    width = max(len(c) for c in ['STATE', '$'] + terminals + nonterminals) + 1
 
     print('\nPARSING TABLE:')
-    print_border()
-    print(f'|{"STATE":^8}|', end=' ')
+    print_line()
+    print(f'|{"STATE":^{width + 1}}|', end=' ')
 
     for symbol in terminals + ['$'] + nonterminals:
-        print(f'{symbol:^7}|', end=' ')
+        print(f'{symbol:^{width}}|', end=' ')
 
     print()
-    print_border()
+    print_line()
 
     for r in range(len(C)):
-        print(f'|{r:^8}|', end=' ')
+        print(f'|{r:^{width + 1}}|', end=' ')
 
         for c in terminals + ['$'] + nonterminals:
-            print(f'{parse_table[r][c]:^7}|', end=' ')
+            print(f'{parse_table[r][c]:^{width}}|', end=' ')
 
         print()
 
-    print_border()
+    print_line()
 
     automaton = Digraph('automaton', node_attr={'shape': 'record'})
 
@@ -259,7 +263,7 @@ def print_info():
 
         for item in items:
             item = item.split()
-            I += f'{item[0]:>{len(max(G_prime.keys(), key=len))}} &#8594; {" ".join(item[2:])} <BR ALIGN="LEFT"/>'
+            I += f'{item[0]:>{max_G_prime}} &#8594; {" ".join(item[2:])} <BR ALIGN="LEFT"/>'
             automaton.node(f'I{i}', f'{I}>')
 
     for r in range(len(C)):
@@ -283,67 +287,80 @@ def print_info():
 
 
 def LR_parser(w, parse_table):
-    def print_border():
-        print('+' + '-' * 8 + ('+' + '-' * 28) * 2 + '+' + '-' * 11 + '+')
+    def print_line():
+        print('+' + '-' * (max_step + 2) + '+' + '-' * (max_stack + 2) + '+' + '-' * (max_input + 2) + '+' + '-' * (
+                max_action + 2) + '+')
 
     buffer = f'{w} $'.split()
     pointer = 0
     a = buffer[pointer]
     stack = ['0']
 
-    print()
-    print_border()
-    print(f'|{"STEP":^8}|{"STACK":^28}|{"INPUT":^28}|{"ACTION":^11}|')
-    print_border()
+    step_history = ['STEP']
+    stack_history = ['STACK'] + stack
+    input_history = ['INPUT']
+    action_history = ['ACTION']
 
     step = 0
     while True:
         s = int(stack[-1])
         step += 1
-
-        print(f'|{step:^8}| {"".join(stack):27}| {"".join(buffer[pointer:]):>26} | ', end=' ')
+        step_history.append(step)
+        input_history.append(''.join(buffer[pointer:]))
 
         if a not in parse_table[s].keys():
-            print(f'ERROR: Unrecognized Symbol {a} |')
+            action_history.append(f'ERROR: Unrecognized Symbol {a}')
 
             break
 
         elif not parse_table[s][a]:
-            print('ERROR: Input Cannot be Parsed by Given Grammar |')
+            action_history.append('ERROR: Input Cannot be Parsed by Given Grammar')
 
             break
 
         elif '/' in parse_table[s][a]:
             if parse_table[s][a].startswith('r') and parse_table[s][a][parse_table[s][a].index('/') + 1] == 'r':
-                print(f'ERROR: Reduce-Reduce Conflict at State {s}, Symbol {a} |')
+                action_history.append(f'ERROR: Reduce-Reduce Conflict at State {s}, Symbol {a}')
             else:
-                print(f'ERROR: Shift-Reduce Conflict at State {s}, Symbol {a} |')
+                action_history.append(f'ERROR: Shift-Reduce Conflict at State {s}, Symbol {a}')
 
             break
 
         elif parse_table[s][a].startswith('s'):
-            print(f'{parse_table[s][a]:^9}|')
-
+            action_history.append(parse_table[s][a])
             stack += [a, parse_table[s][a][1:]]
+            stack_history.append(''.join(stack))
             pointer += 1
             a = buffer[pointer]
 
         elif parse_table[s][a].startswith('r'):
-            print(f'{parse_table[s][a]:^9}|')
-
+            action_history.append(parse_table[s][a])
             grammar = G_indexed[int(parse_table[s][a][1:])].split()
 
             if grammar[-1] != '^':
                 stack = stack[:-(2 * len(grammar[grammar.index('->') + 1:]))]
                 head = grammar[0]
                 stack += [head, str(parse_table[int(stack[-1])][head])]
+                stack_history.append(''.join(stack))
 
         elif parse_table[s][a] == 'acc':
-            print(f'{"ACCEPTED":^9}|')
+            action_history.append('ACCEPTED')
 
             break
 
-    print_border()
+    max_step = max(len(str(step)) for step in step_history)
+    max_stack = max(len(stack) for stack in stack_history)
+    max_input = max(len(input) for input in input_history)
+    max_action = max(len(action) for action in action_history)
+
+    print_line()
+    print(
+        f'| {step_history[0]:^{max_step}} | {stack_history[0]:^{max_stack}} | {input_history[0]:^{max_input}} | {action_history[0]:^{max_action}} |')
+    print_line()
+    for i, step in enumerate(step_history[:-1], 1):
+        print(
+            f'| {step_history[i]:^{max_step}} | {stack_history[i]:{max_stack}} | {input_history[i]:>{max_input}} | {action_history[i]:^{max_action}} |')
+    print_line()
 
 
 G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar()
