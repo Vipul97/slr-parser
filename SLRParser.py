@@ -262,8 +262,8 @@ def print_info():
         I = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
         for item in items:
-            item = item.split()
-            I += f'{item[0]:>{max_G_prime}} &#8594; {" ".join(item[2:])} <BR ALIGN="LEFT"/>'
+            head, _, prod = item.partition('->')
+            I += f'{head:>{max_G_prime}} &#8594; {prod} <BR ALIGN="LEFT"/>'
             automaton.node(f'I{i}', f'{I}>')
 
     for r in range(len(C)):
