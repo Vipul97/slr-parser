@@ -3,19 +3,18 @@ from graphviz import Digraph
 
 def parse_grammar():
     G_prime = {}
-    G_indexed = {}
+    G_indexed = [['', '']]
     start = ''
     terminals = set([])
     nonterminals = set([])
     grammars = open('grammar.txt')
 
-    i = 1
     for grammar in grammars:
         if grammar == '\n':
             continue
 
         head, _, prods = grammar.partition(' -> ')
-        prods = [a.split() for a in ' '.join(prods.split()).split('|')]
+        prods = [prod.split() for prod in ' '.join(prods.split()).split('|')]
 
         if not start:
             start = f"{head}'"
@@ -27,10 +26,7 @@ def parse_grammar():
 
         for prod in prods:
             G_prime[head].append(prod)
-            G_indexed[i] = {}
-            G_indexed[i][head] = prod
-
-            i += 1
+            G_indexed.append([head, prod])
 
             for symbol in prod:
                 if not symbol.isupper() and symbol != '^':
@@ -95,18 +91,18 @@ def FOLLOW(A):
     if A == start:  # CASE 1
         follow.add('$')
 
-    for (heads, prods) in G_prime.items():
+    for (head, prods) in G_prime.items():
         for prod in prods:
             if A in prod[:-1]:  # CASE 2
                 first = FIRST(prod[prod.index(A) + 1])
                 follow |= (first - set('^'))
 
-                if '^' in first and heads not in follow_seen:  # CASE 3
-                    follow |= FOLLOW(heads)
+                if '^' in first and head not in follow_seen:  # CASE 3
+                    follow |= FOLLOW(head)
 
             elif A in prod[-1]:  # CASE 3
-                if heads not in follow_seen:
-                    follow |= FOLLOW(heads)
+                if head not in follow_seen:
+                    follow |= FOLLOW(head)
 
     follow_seen.remove(A)
 
@@ -147,6 +143,7 @@ def GOTO(I, X):
 
 def items():
     C = [CLOSURE([[start, '->', '.', start[:-1]]])]
+
     while True:
         item_len = len(C)
 
@@ -168,17 +165,17 @@ def construct_table():
                 head = ' '.join(item[:item.index('->')])
                 prod = item[item.index('->') + 1:]
 
-                if '.' in prod[:-1] and a in terminals:  # CASE 1 a
-                    if prod[prod.index('.') + 1] == a:
-                        if 'r' in parse_table[i][a]:
-                            parse_table[i][a] += f'/s{C.index(GOTO(I, a))}'
-                        else:
-                            parse_table[i][a] = f's{C.index(GOTO(I, a))}'
+                if '.' in prod[:-1] and a in terminals and prod[
+                    prod.index('.') + 1] == a and f's{C.index(GOTO(I, a))}' not in parse_table[i][a]:  # CASE 1 a
+                    if 'r' in parse_table[i][a]:
+                        parse_table[i][a] += '/'
+
+                    parse_table[i][a] += f's{C.index(GOTO(I, a))}'
 
                 elif prod[-1] == '.':  # CASE 1 b
                     if head != start:
-                        for j in G_indexed:
-                            if head in G_indexed[j].keys() and G_indexed[j][head] == prod[:-1]:
+                        for j, (G_head, G_prod) in enumerate(G_indexed):
+                            if head == G_head and G_prod == prod[:-1]:
                                 for f in FOLLOW(head):
                                     if parse_table[i][f]:
                                         if f'r{j}' not in parse_table[i][f]:
@@ -285,16 +282,18 @@ def print_info():
 
 def LR_parser(w, parse_table):
     def print_line():
-        print('+' + '-' * (max_step + 2) + '+' + '-' * (max_stack + 2) + '+' + '-' * (max_input + 2) + '+' + '-' * (
-                max_action + 2) + '+')
+        print('+' + '-' * (max_step + 2) + '+' + '-' * (max_stack + 2) + '+' + '-' * (max_symbols + 2) + '+' + '-' * (
+                    max_input + 2) + '+' + '-' * (max_action + 2) + '+')
 
     buffer = f'{w} $'.split()
     pointer = 0
     a = buffer[pointer]
     stack = ['0']
+    symbols = ['']
 
-    step_history = ['STEP']
+    step_history = ['']
     stack_history = ['STACK'] + stack
+    symbols_history = ['SYMBOLS'] + symbols
     input_history = ['INPUT']
     action_history = ['ACTION']
 
@@ -302,60 +301,66 @@ def LR_parser(w, parse_table):
     while True:
         s = int(stack[-1])
         step += 1
-        step_history.append(step)
-        input_history.append(''.join(buffer[pointer:]))
+        step_history.append(f'({step})')
+        input_history.append(' '.join(buffer[pointer:]))
 
         if a not in parse_table[s].keys():
-            action_history.append(f'ERROR: Unrecognized Symbol {a}')
+            action_history.append(f'ERROR: unrecognized symbol {a}')
 
             break
 
         elif not parse_table[s][a]:
-            action_history.append('ERROR: Input Cannot be Parsed by Given Grammar')
+            action_history.append('ERROR: input cannot be parsed by given grammar')
 
             break
 
         elif '/' in parse_table[s][a]:
             if parse_table[s][a].count('r') > 1:
-                action_history.append(f'ERROR: Reduce-Reduce Conflict at State {s}, Symbol {a}')
+                action_history.append(f'ERROR: reduce-reduce conflict at state {s}, symbol {a}')
             else:
-                action_history.append(f'ERROR: Shift-Reduce Conflict at State {s}, Symbol {a}')
+                action_history.append(f'ERROR: shift-reduce conflict at state {s}, symbol {a}')
 
             break
 
         elif parse_table[s][a].startswith('s'):
-            action_history.append(parse_table[s][a])
-            stack += [a, parse_table[s][a][1:]]
-            stack_history.append(''.join(stack))
+            action_history.append('shift')
+            stack.append(parse_table[s][a][1:])
+            symbols.append(a)
+            stack_history.append(' '.join(stack))
+            symbols_history.append(' '.join(symbols))
             pointer += 1
             a = buffer[pointer]
 
         elif parse_table[s][a].startswith('r'):
-            action_history.append(parse_table[s][a])
+            head, prod = G_indexed[int(parse_table[s][a][1:])]
+            action_history.append(f'reduce by {head} -> {" ".join(prod)}')
 
-            for head, prod in G_indexed[int(parse_table[s][a][1:])].items():
-                if prod[-1] != '^':
-                    stack = stack[:-(2 * len(prod))]
-                    stack += [head, str(parse_table[int(stack[-1])][head])]
-                    stack_history.append(''.join(stack))
+            if prod[-1] != '^':
+                stack = stack[:-len(prod)]
+                stack.append(str(parse_table[int(stack[-1])][head]))
+                symbols = symbols[:-len(prod)]
+                symbols.append(head)
+                stack_history.append(' '.join(stack))
+                symbols_history.append(' '.join(symbols))
 
         elif parse_table[s][a] == 'acc':
-            action_history.append('ACCEPTED')
+            action_history.append('accept')
 
             break
 
     max_step = max(len(str(step)) for step in step_history)
     max_stack = max(len(stack) for stack in stack_history)
+    max_symbols = max(len(symbols) for symbols in symbols_history)
     max_input = max(len(input) for input in input_history)
     max_action = max(len(action) for action in action_history)
 
     print_line()
     print(
-        f'| {step_history[0]:^{max_step}} | {stack_history[0]:^{max_stack}} | {input_history[0]:^{max_input}} | {action_history[0]:^{max_action}} |')
+        f'| {"":^{max_step}} | {stack_history[0]:^{max_stack}} | {symbols_history[0]:^{max_symbols}} | {input_history[0]:^{max_input}} | {action_history[0]:^{max_action}} |')
     print_line()
     for i, step in enumerate(step_history[:-1], 1):
         print(
-            f'| {step_history[i]:^{max_step}} | {stack_history[i]:{max_stack}} | {input_history[i]:>{max_input}} | {action_history[i]:^{max_action}} |')
+            f'| {step_history[i]:>{max_step}} | {stack_history[i]:{max_stack}} | {symbols_history[i]:{max_symbols}} | {input_history[i]:>{max_input}} | {action_history[i]:{max_action}} |')
     print_line()
 
 
