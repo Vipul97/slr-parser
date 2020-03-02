@@ -12,6 +12,7 @@ The grammar can be edited in grammar.txt.
 * Capitalized symbols are treated as non-terminals and non-capitalized symbols are treated as terminals.
 * All symbols in the body of the production are separated by spaces. Multicharacter symbols can be made by not including spaces between the characters.
 * The choice operator ``` | ``` can be used in the body of the production to match either the expression before or the expression after the operator.
+* ```^``` is treated as the null symbol.
 
 ## Instructions
 1. Input the grammar in grammar.txt.
