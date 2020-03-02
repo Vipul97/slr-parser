@@ -362,7 +362,7 @@ def LR_parser(w):
             head, prod = G_indexed[int(parse_table[s][a][1:])]
             histories['action'].append(f'reduce by {head} -> {" ".join(prod)}')
 
-            if prod[-1] != '^':
+            if prod != ['^']:
                 stack = stack[:-len(prod)]
                 symbols = symbols[:-len(prod)]
 
@@ -381,7 +381,7 @@ def LR_parser(w):
                 'symbols': max(len(symbols) for symbols in histories['symbols']),
                 'input': max(len(input) for input in histories['input']),
                 'action': max(len(action) for action in histories['action'])}
-    justs = {'step': ">", 'stack': "", 'symbols': "", 'input': ">", 'action': ""}
+    justs = {'step': '>', 'stack': '', 'symbols': '', 'input': '>', 'action': ''}
 
     print_line()
     print("".join(
