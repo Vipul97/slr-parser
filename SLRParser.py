@@ -280,8 +280,19 @@ def generate_automaton():
 
         for (head, prods) in I.items():
             for prod in prods:
-                I_str += f'{head:>{max_G_prime}} &#8594; {" ".join(prod)} <BR ALIGN="LEFT"/>'
-                automaton.node(f'I{i}', f'{I_str}>')
+                I_str += f'<I>{head:>{max_G_prime}}</I> &#8594;'
+
+                for symbol in prod:
+                    if symbol in nonterminals:
+                        I_str += f' <I>{symbol}</I>'
+                    elif symbol in terminals:
+                        I_str += f' <B>{symbol}</B>'
+                    else:
+                        I_str += f' {symbol}'
+
+                I_str += '<BR ALIGN="LEFT"/>'
+
+        automaton.node(f'I{i}', f'{I_str}>')
 
     for r in range(len(C)):
         for c in terminals + ['$'] + nonterminals:
@@ -294,7 +305,7 @@ def generate_automaton():
                 if '/' in i:
                     i = i[:i.index('/')]
 
-                automaton.edge(f'I{r}', f'I{i}', label=c)
+                automaton.edge(f'I{r}', f'I{i}', label=f'<<B>{c}</B>>' if c in terminals else c)
 
             elif parse_table[r][c] == 'acc':
                 automaton.node('acc', '<<B>accept</B>>', shape='none')
