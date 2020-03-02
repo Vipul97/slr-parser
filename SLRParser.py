@@ -119,13 +119,18 @@ def CLOSURE(I):
             for prod in prods:
                 if '.' in prod[:-1]:
                     symbol_after_dot = prod[prod.index('.') + 1]
-
                     if symbol_after_dot in nonterminals:
                         for G_prod in G_prime[symbol_after_dot]:
-                            if symbol_after_dot not in J.keys():
-                                J[symbol_after_dot] = [['.'] + G_prod]
-                            elif ['.'] + G_prod not in J[symbol_after_dot]:
-                                J[symbol_after_dot].append(['.'] + G_prod)
+                            if G_prod == ['^']:
+                                if symbol_after_dot not in J.keys():
+                                    J[symbol_after_dot] = [['.']]
+                                elif ['.'] not in J[symbol_after_dot]:
+                                    J[symbol_after_dot].append(['.'])
+                            else:
+                                if symbol_after_dot not in J.keys():
+                                    J[symbol_after_dot] = [['.'] + G_prod]
+                                elif ['.'] + G_prod not in J[symbol_after_dot]:
+                                    J[symbol_after_dot].append(['.'] + G_prod)
 
         if item_len == len(J):
             return J
@@ -261,7 +266,10 @@ def print_info():
 
     print(f'+{("-" * width + "+") * (len(symbols + ["$"]) + 1)}')
 
+
+def generate_automaton():
     automaton = Digraph('automaton', node_attr={'shape': 'record'})
+    max_G_prime = len(max(G_prime.keys(), key=len))
 
     for i, I in enumerate(C):
         I_str = f'<<I>I</I><SUB>{i}</SUB><BR/>'
@@ -379,5 +387,6 @@ G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar()
 C = items()
 parse_table = construct_table()
 print_info()
+generate_automaton()
 
 LR_parser(input('\nEnter Input: '))
