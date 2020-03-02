@@ -7,13 +7,12 @@ def parse_grammar():
     start = ''
     terminals = set([])
     nonterminals = set([])
-    grammars = open('grammar.txt')
 
-    for grammar in grammars:
-        if grammar == '\n':
-            continue
+    with open('grammar.txt') as grammar_file:
+        grammar = list(filter(None, grammar_file.read().splitlines()))
 
-        head, _, prods = grammar.partition(' -> ')
+    for g in grammar:
+        head, _, prods = g.partition(' -> ')
         prods = [prod.split() for prod in ' '.join(prods.split()).split('|')]
 
         if not start:
@@ -33,8 +32,6 @@ def parse_grammar():
                     terminals.add(symbol)
                 elif symbol.isupper():
                     nonterminals.add(symbol)
-
-    grammars.close()
 
     return G_prime, G_indexed, start, [terminal for terminal in terminals], [nonterminal for nonterminal in
                                                                              nonterminals], [symbol for symbol in
@@ -123,6 +120,7 @@ def CLOSURE(I):
             for prod in prods:
                 if '.' in prod[:-1]:
                     symbol_after_dot = prod[prod.index('.') + 1]
+
                     if symbol_after_dot in nonterminals:
                         for G_prod in G_prime[symbol_after_dot]:
                             if G_prod == ['^']:
@@ -184,22 +182,23 @@ def construct_table():
                 if '.' in prod[:-1]:  # CASE 2 a
                     symbol_after_dot = prod[prod.index('.') + 1]
 
-                    if symbol_after_dot in terminals and f's{C.index(GOTO(I, symbol_after_dot))}' not in parse_table[i][
-                        symbol_after_dot]:
-                        if 'r' in parse_table[i][symbol_after_dot]:
-                            parse_table[i][symbol_after_dot] += '/'
+                    if symbol_after_dot in terminals:
+                        s = f's{C.index(GOTO(I, symbol_after_dot))}'
 
-                        parse_table[i][symbol_after_dot] += f's{C.index(GOTO(I, symbol_after_dot))}'
+                        if s not in parse_table[i][symbol_after_dot]:
+                            if 'r' in parse_table[i][symbol_after_dot]:
+                                parse_table[i][symbol_after_dot] += '/'
+
+                            parse_table[i][symbol_after_dot] += s
 
                 elif prod[-1] == '.' and head != start:  # CASE 2 b
                     for j, (G_head, G_prod) in enumerate(G_indexed):
                         if G_head == head and (G_prod == prod[:-1] or G_prod == ['^'] and prod == ['.']):
                             for f in FOLLOW(head):
                                 if parse_table[i][f]:
-                                    if f'r{j}' not in parse_table[i][f]:
-                                        parse_table[i][f] += f'/r{j}'
-                                else:
-                                    parse_table[i][f] = f'r{j}'
+                                    parse_table[i][f] += '/'
+
+                                parse_table[i][f] += f'r{j}'
 
                             break
 
@@ -223,13 +222,11 @@ def print_info():
     i = 0
     for head, prods in G_prime.items():
         for prod in prods:
-            print(
-                f'{i:>{len(str(sum(len(v) for v in G_prime.values()) - 1))}}: {head:>{max_G_prime}} -> {" ".join(prod)}')
+            print(f'{i:>{len(str(len(G_indexed) - 1))}}: {head:>{max_G_prime}} -> {" ".join(prod)}')
 
             i += 1
 
-    print()
-    print(f'{"TERMINALS:":>13} {", ".join(terminals)}')
+    print(f'\n{"TERMINALS:":>13} {", ".join(terminals)}')
     print(f'{"NONTERMINALS:":>13} {", ".join(nonterminals)}')
     print(f'{"SYMBOLS:":>13} {", ".join(symbols)}')
 
@@ -244,7 +241,8 @@ def print_info():
     width = max(len(c) for c in ['ACTION'] + symbols) + 2
     for r in range(len(C)):
         max_len = max(len(str(c)) for c in parse_table[r].values())
-        if width < max_len:
+
+        if width < max_len + 2:
             width = max_len + 2
 
     print('\nPARSING TABLE:')
@@ -316,58 +314,53 @@ def generate_automaton():
 
 def LR_parser(w):
     def print_line():
-        print('+' + '-' * (max_step + 2) + '+' + '-' * (max_stack + 2) + '+' + '-' * (max_symbols + 2) + '+' + '-' * (
-                max_input + 2) + '+' + '-' * (max_action + 2) + '+')
+        print(f'{"".join(["+" + ("-" * (max_len + 2)) for max_len in max_lens.values()])}+')
 
     buffer = f'{w} $'.split()
     pointer = 0
     a = buffer[pointer]
     stack = ['0']
     symbols = ['']
-
-    step_history = ['']
-    stack_history = ['STACK'] + stack
-    symbols_history = ['SYMBOLS'] + symbols
-    input_history = ['INPUT']
-    action_history = ['ACTION']
+    histories = {'step': [''], 'stack': ['STACK'] + stack, 'symbols': ['SYMBOLS'] + symbols, 'input': ['INPUT'],
+                 'action': ['ACTION']}
 
     step = 0
     while True:
         s = int(stack[-1])
         step += 1
-        step_history.append(f'({step})')
-        input_history.append(' '.join(buffer[pointer:]))
+        histories['step'].append(f'({step})')
+        histories['input'].append(' '.join(buffer[pointer:]))
 
         if a not in parse_table[s].keys():
-            action_history.append(f'ERROR: unrecognized symbol {a}')
+            histories['action'].append(f'ERROR: unrecognized symbol {a}')
 
             break
 
         elif not parse_table[s][a]:
-            action_history.append('ERROR: input cannot be parsed by given grammar')
+            histories['action'].append('ERROR: input cannot be parsed by given grammar')
 
             break
 
         elif '/' in parse_table[s][a]:
             if parse_table[s][a].count('r') > 1:
-                action_history.append(f'ERROR: reduce-reduce conflict at state {s}, symbol {a}')
+                histories['action'].append(f'ERROR: reduce-reduce conflict at state {s}, symbol {a}')
             else:
-                action_history.append(f'ERROR: shift-reduce conflict at state {s}, symbol {a}')
+                histories['action'].append(f'ERROR: shift-reduce conflict at state {s}, symbol {a}')
 
             break
 
         elif parse_table[s][a].startswith('s'):
-            action_history.append('shift')
+            histories['action'].append('shift')
             stack.append(parse_table[s][a][1:])
             symbols.append(a)
-            stack_history.append(' '.join(stack))
-            symbols_history.append(' '.join(symbols))
+            histories['stack'].append(' '.join(stack))
+            histories['symbols'].append(' '.join(symbols))
             pointer += 1
             a = buffer[pointer]
 
         elif parse_table[s][a].startswith('r'):
             head, prod = G_indexed[int(parse_table[s][a][1:])]
-            action_history.append(f'reduce by {head} -> {" ".join(prod)}')
+            histories['action'].append(f'reduce by {head} -> {" ".join(prod)}')
 
             if prod[-1] != '^':
                 stack = stack[:-len(prod)]
@@ -375,27 +368,29 @@ def LR_parser(w):
 
             stack.append(str(parse_table[int(stack[-1])][head]))
             symbols.append(head)
-            stack_history.append(' '.join(stack))
-            symbols_history.append(' '.join(symbols))
+            histories['stack'].append(' '.join(stack))
+            histories['symbols'].append(' '.join(symbols))
 
         elif parse_table[s][a] == 'acc':
-            action_history.append('accept')
+            histories['action'].append('accept')
 
             break
 
-    max_step = max(len(step) for step in step_history)
-    max_stack = max(len(stack) for stack in stack_history)
-    max_symbols = max(len(symbols) for symbols in symbols_history)
-    max_input = max(len(input) for input in input_history)
-    max_action = max(len(action) for action in action_history)
+    max_lens = {'step': max(len(step) for step in histories['step']),
+                'stack': max(len(stack) for stack in histories['stack']),
+                'symbols': max(len(symbols) for symbols in histories['symbols']),
+                'input': max(len(input) for input in histories['input']),
+                'action': max(len(action) for action in histories['action'])}
+    justs = {'step': ">", 'stack': "", 'symbols': "", 'input': ">", 'action': ""}
 
     print_line()
-    print(
-        f'| {"":^{max_step}} | {stack_history[0]:^{max_stack}} | {symbols_history[0]:^{max_symbols}} | {input_history[0]:^{max_input}} | {action_history[0]:^{max_action}} |')
+    print("".join(
+        [f'| {history[0]:^{max_len}} ' for history, max_len in zip(histories.values(), max_lens.values())]) + '|')
     print_line()
-    for i, step in enumerate(step_history[:-1], 1):
-        print(
-            f'| {step_history[i]:>{max_step}} | {stack_history[i]:{max_stack}} | {symbols_history[i]:{max_symbols}} | {input_history[i]:>{max_input}} | {action_history[i]:{max_action}} |')
+    for i, step in enumerate(histories['step'][:-1], 1):
+        print("".join([f'| {history[i]:{just}{max_len}} ' for history, just, max_len in
+                       zip(histories.values(), justs.values(), max_lens.values())]) + '|')
+
     print_line()
 
 
