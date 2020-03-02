@@ -189,7 +189,7 @@ def construct_table():
 
                 elif prod[-1] == '.' and head != start:  # CASE 2 b
                     for j, (G_head, G_prod) in enumerate(G_indexed):
-                        if head == G_head and G_prod == prod[:-1]:
+                        if G_head == head and (G_prod == prod[:-1] or G_prod == ['^'] and prod == ['.']):
                             for f in FOLLOW(head):
                                 if parse_table[i][f]:
                                     if f'r{j}' not in parse_table[i][f]:
@@ -356,11 +356,12 @@ def LR_parser(w):
 
             if prod[-1] != '^':
                 stack = stack[:-len(prod)]
-                stack.append(str(parse_table[int(stack[-1])][head]))
                 symbols = symbols[:-len(prod)]
-                symbols.append(head)
-                stack_history.append(' '.join(stack))
-                symbols_history.append(' '.join(symbols))
+
+            stack.append(str(parse_table[int(stack[-1])][head]))
+            symbols.append(head)
+            stack_history.append(' '.join(stack))
+            symbols_history.append(' '.join(symbols))
 
         elif parse_table[s][a] == 'acc':
             action_history.append('accept')
