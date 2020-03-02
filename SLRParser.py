@@ -384,11 +384,11 @@ def LR_parser(w):
     justs = {'step': '>', 'stack': '', 'symbols': '', 'input': '>', 'action': ''}
 
     print_line()
-    print("".join(
+    print(''.join(
         [f'| {history[0]:^{max_len}} ' for history, max_len in zip(histories.values(), max_lens.values())]) + '|')
     print_line()
     for i, step in enumerate(histories['step'][:-1], 1):
-        print("".join([f'| {history[i]:{just}{max_len}} ' for history, just, max_len in
+        print(''.join([f'| {history[i]:{just}{max_len}} ' for history, just, max_len in
                        zip(histories.values(), justs.values(), max_lens.values())]) + '|')
 
     print_line()
