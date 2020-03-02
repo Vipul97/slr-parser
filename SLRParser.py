@@ -207,9 +207,6 @@ def construct_table():
 
 
 def print_info():
-    def print_line():
-        print(('+' + '-' * (width + 1)) * (len(symbols) + 2) + '+')
-
     max_G_prime = len(max(G_prime.keys(), key=len))
 
     print('AUGMENTED GRAMMAR:')
@@ -235,27 +232,34 @@ def print_info():
     for head in G_prime.keys():
         print(f'{head:>{max_G_prime}} = {{ {", ".join(FOLLOW(head))} }}')
 
-    width = max(len(c) for c in ['STATE', '$'] + terminals + nonterminals) + 1
+    width = max(len(c) for c in ['ACTION'] + symbols) + 2
+    for r in range(len(C)):
+        max_len = max(len(str(c)) for c in parse_table[r].values())
+        if width < max_len:
+            width = max_len + 2
 
     print('\nPARSING TABLE:')
-    print_line()
-    print(f'|{"STATE":^{width + 1}}|', end=' ')
+    print(
+        f'+{"-" * width}+{"-" * ((width + 1) * len(terminals + ["$"]) - 1)}+{"-" * ((width + 1) * len(nonterminals) - 1)}+')
+    print(
+        f'|{"":{width}}|{"ACTION":^{(width + 1) * len(terminals + ["$"]) - 1}}|{"GOTO":^{(width + 1) * len(nonterminals) - 1}}|')
+    print(f'|{"STATE":^{width}}+{("-" * width + "+") * len(symbols + ["$"])}')
+    print(f'|{"":^{width}}|', end=' ')
 
     for symbol in terminals + ['$'] + nonterminals:
-        print(f'{symbol:^{width}}|', end=' ')
+        print(f'{symbol:^{width - 1}}|', end=' ')
 
-    print()
-    print_line()
+    print(f'\n+{("-" * width + "+") * (len(symbols + ["$"]) + 1)}')
 
     for r in range(len(C)):
-        print(f'|{r:^{width + 1}}|', end=' ')
+        print(f'|{r:^{width}}|', end=' ')
 
         for c in terminals + ['$'] + nonterminals:
-            print(f'{parse_table[r][c]:^{width}}|', end=' ')
+            print(f'{parse_table[r][c]:^{width - 1}}|', end=' ')
 
         print()
 
-    print_line()
+    print(f'+{("-" * width + "+") * (len(symbols + ["$"]) + 1)}')
 
     automaton = Digraph('automaton', node_attr={'shape': 'record'})
 
