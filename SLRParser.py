@@ -49,34 +49,40 @@ def FIRST(X):
         return {X}
     else:
         global first_seen
-
         first = set([])
-        first_seen.append(X)
 
-        for prod in G_prime[X]:
-            if prod == ['^']:  # CASE 3
-                first.add('^')
+        while True:
+            first_seen.append(X)
+            first_len = len(first)
 
-            else:  # CASE 2
-                for i, symbol in enumerate(prod):
-                    if symbol not in first_seen:
-                        symbol_first = FIRST(symbol)
+            for prod in G_prime[X]:
+                if prod != ['^']:  # CASE 2
+                    for symbol in prod:
+                        if symbol == X and '^' in first:
+                            continue
 
-                        for sf in symbol_first:
-                            if sf in terminals:
-                                first.add(sf)
+                        if symbol not in first_seen:
+                            symbol_first = FIRST(symbol)
 
-                        if '^' not in symbol_first:
+                            for sf in symbol_first:
+                                if sf in terminals:
+                                    first.add(sf)
+
+                            if '^' not in symbol_first:
+                                break
+
+                        else:
                             break
-                    else:
-                        break
 
-                    if i + 1 == len(prod):
                         first.add('^')
 
-        first_seen.remove(X)
+                else:  # CASE 3
+                    first.add('^')
 
-        return first
+            first_seen.remove(X)
+
+            if first_len == len(first):
+                return first
 
 
 follow_seen = []
@@ -84,7 +90,6 @@ follow_seen = []
 
 def FOLLOW(A):
     global follow_seen
-
     follow = set([])
     follow_seen.append(A)
 
@@ -100,9 +105,8 @@ def FOLLOW(A):
                 if '^' in first and head not in follow_seen:  # CASE 3
                     follow |= FOLLOW(head)
 
-            elif A in prod[-1]:  # CASE 3
-                if head not in follow_seen:
-                    follow |= FOLLOW(head)
+            elif A in prod[-1] and head not in follow_seen:  # CASE 3
+                follow |= FOLLOW(head)
 
     follow_seen.remove(A)
 
