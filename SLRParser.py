@@ -62,7 +62,7 @@ def FIRST(X):
                             symbol_first = FIRST(symbol)
 
                             for sf in symbol_first:
-                                if sf in terminals:
+                                if sf != '^':
                                     first.add(sf)
 
                             if '^' not in symbol_first:
