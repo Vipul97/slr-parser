@@ -378,11 +378,7 @@ def LR_parser(w):
 
             break
 
-    max_lens = {'step': max(len(step) for step in histories['step']),
-                'stack': max(len(stack) for stack in histories['stack']),
-                'symbols': max(len(symbols) for symbols in histories['symbols']),
-                'input': max(len(input) for input in histories['input']),
-                'action': max(len(action) for action in histories['action'])}
+    max_lens = {key: max(len(value) for value in histories[key]) for key in histories.keys()}
     justs = {'step': '>', 'stack': '', 'symbols': '', 'input': '>', 'action': ''}
 
     print_line()
