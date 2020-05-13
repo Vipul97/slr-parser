@@ -392,10 +392,11 @@ def LR_parser(w):
     print_line()
 
 
-G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar()
-C = items()
-parse_table = construct_table()
-print_info()
-generate_automaton()
+if __name__ == "__main__":
+    G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar()
+    C = items()
+    parse_table = construct_table()
+    print_info()
+    generate_automaton()
 
-LR_parser(input('\nEnter Input: '))
+    LR_parser(input('\nEnter Input: '))
