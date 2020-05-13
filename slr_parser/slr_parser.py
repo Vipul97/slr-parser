@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
 from graphviz import Digraph
+import argparse
 
 
-def parse_grammar():
+def parse_grammar(grammar_file):
     G_prime = {}
     G_indexed = [['', '']]
     start = ''
     terminals = set([])
     nonterminals = set([])
-
-    with open('grammar.txt') as grammar_file:
-        grammar = list(filter(None, grammar_file.read().splitlines()))
+    grammar = list(filter(None, grammar_file.read().splitlines()))
 
     for g in grammar:
         head, _, prods = g.partition(' -> ')
@@ -269,6 +268,7 @@ def print_info():
         print()
 
     print(f'+{("-" * width + "+") * (len(symbols + ["$"]) + 1)}')
+    print()
 
 
 def generate_automaton():
@@ -393,10 +393,17 @@ def LR_parser(w):
 
 
 if __name__ == "__main__":
-    G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('grammar_file', type=argparse.FileType('r'), help='text file to be used as grammar')
+    parser.add_argument('-g', action='store_true', help='generate automaton')
+    parser.add_argument('tokens', help='tokens to be parsed - all tokens are separated with spaces')
+    args = parser.parse_args()
+    G_prime, G_indexed, start, terminals, nonterminals, symbols = parse_grammar(args.grammar_file)
     C = items()
     parse_table = construct_table()
     print_info()
-    generate_automaton()
 
-    LR_parser(input('\nEnter Input: '))
+    if args.g:
+        generate_automaton()
+
+    LR_parser(args.tokens)
