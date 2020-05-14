@@ -275,23 +275,23 @@ class SLRParser:
         max_G_prime = len(max(self.G_prime.keys(), key=len))
 
         for i, I in enumerate(self.C):
-            I_str = f'<<I>I</I><SUB>{i}</SUB><BR/>'
+            I_html = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
             for (head, prods) in I.items():
                 for prod in prods:
-                    I_str += f'<I>{head:>{max_G_prime}}</I> &#8594;'
+                    I_html += f'<I>{head:>{max_G_prime}}</I> &#8594;'
 
                     for symbol in prod:
                         if symbol in self.nonterminals:
-                            I_str += f' <I>{symbol}</I>'
+                            I_html += f' <I>{symbol}</I>'
                         elif symbol in self.terminals:
-                            I_str += f' <B>{symbol}</B>'
+                            I_html += f' <B>{symbol}</B>'
                         else:
-                            I_str += f' {symbol}'
+                            I_html += f' {symbol}'
 
-                    I_str += '<BR ALIGN="LEFT"/>'
+                    I_html += '<BR ALIGN="LEFT"/>'
 
-            automaton.node(f'I{i}', f'{I_str}>')
+            automaton.node(f'I{i}', f'{I_html}>')
 
         for r in range(len(self.C)):
             for c in self.terminals + ['$'] + self.nonterminals:
