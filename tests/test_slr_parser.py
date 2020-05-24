@@ -13,7 +13,6 @@ class TestSLRParser(unittest.TestCase):
                               'F': [['(', 'E', ')'], ['id']]}, self.slr_parser.G_prime)
         self.assertListEqual([['', ''], ['E', ['E', '+', 'T']], ['E', ['T']], ['T', ['T', '*', 'F']], ['T', ['F']],
                               ['F', ['(', 'E', ')']], ['F', ['id']]], self.slr_parser.G_indexed)
-        self.assertEqual("E'", self.slr_parser.start)
         self.assertSetEqual({'+', '*', '(', ')', 'id'}, set(self.slr_parser.terminals))
         self.assertSetEqual({'E', 'T', 'F'}, set(self.slr_parser.nonterminals))
         self.assertSetEqual({'+', '*', '(', ')', 'id', 'E', 'T', 'F'}, set(self.slr_parser.symbols))
