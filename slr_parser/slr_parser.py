@@ -217,7 +217,7 @@ class SLRParser:
 
     def print_info(self):
         def fprint(text, variable):
-            print(f'{text:>13} {", ".join(variable)}')
+            print(f'{text:>13}: {", ".join(variable)}')
 
         def print_line():
             print(f'+{("-" * width + "+") * (len(self.symbols + ["$"]) + 1)}')
@@ -234,9 +234,9 @@ class SLRParser:
                 i += 1
 
         print()
-        fprint('TERMINALS:', self.terminals)
-        fprint('NONTERMINALS:', self.nonterminals)
-        fprint('SYMBOLS:', self.symbols)
+        fprint('TERMINALS', self.terminals)
+        fprint('NONTERMINALS', self.nonterminals)
+        fprint('SYMBOLS', self.symbols)
 
         print('\nFIRST:')
         for head in self.G_prime.keys():
