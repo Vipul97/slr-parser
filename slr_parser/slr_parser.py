@@ -350,10 +350,8 @@ class SLRParser:
                 break
 
             elif '/' in self.parse_table[s][a]:
-                if self.parse_table[s][a].count('r') > 1:
-                    histories['action'].append(f'ERROR: reduce-reduce conflict at state {s}, symbol {a}')
-                else:
-                    histories['action'].append(f'ERROR: shift-reduce conflict at state {s}, symbol {a}')
+                histories['action'].append(
+                    f'ERROR: {"reduce" if self.parse_table[s][a].count("r") > 1 else "shift"}-reduce conflict at state {s}, symbol {a}')
 
                 break
 
