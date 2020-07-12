@@ -216,6 +216,12 @@ class SLRParser:
                     self.parse_table[i][A] = self.C.index(j)
 
     def print_info(self):
+        def fprint(text, variable):
+            print(f'{text:>13} {", ".join(variable)}')
+
+        def print_line():
+            print(f'+{("-" * width + "+") * (len(self.symbols + ["$"]) + 1)}')
+
         max_G_prime = len(max(self.G_prime.keys(), key=len))
 
         print('AUGMENTED GRAMMAR:')
@@ -227,9 +233,10 @@ class SLRParser:
 
                 i += 1
 
-        print(f'\n{"TERMINALS:":>13} {", ".join(self.terminals)}')
-        print(f'{"NONTERMINALS:":>13} {", ".join(self.nonterminals)}')
-        print(f'{"SYMBOLS:":>13} {", ".join(self.symbols)}')
+        print()
+        fprint('TERMINALS:', self.terminals)
+        fprint('NONTERMINALS:', self.nonterminals)
+        fprint('SYMBOLS:', self.symbols)
 
         print('\nFIRST:')
         for head in self.G_prime.keys():
@@ -257,7 +264,8 @@ class SLRParser:
         for symbol in self.terminals + ['$'] + self.nonterminals:
             print(f'{symbol:^{width - 1}}|', end=' ')
 
-        print(f'\n+{("-" * width + "+") * (len(self.symbols + ["$"]) + 1)}')
+        print()
+        print_line()
 
         for r in range(len(self.C)):
             print(f'|{r:^{width}}|', end=' ')
@@ -267,7 +275,7 @@ class SLRParser:
 
             print()
 
-        print(f'+{("-" * width + "+") * (len(self.symbols + ["$"]) + 1)}')
+        print_line()
         print()
 
     def generate_automaton(self):
