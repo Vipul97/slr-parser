@@ -6,7 +6,6 @@ import argparse
 
 class SLRParser:
     def __init__(self, grammar_file, tokens):
-        self.grammar = list(filter(None, grammar_file.read().splitlines()))
         self.start = None
         self.G_prime = {}
         self.G_indexed = [['', '']]
@@ -17,19 +16,20 @@ class SLRParser:
         self.follow_seen = []
         self.C = None
         self.parse_table = None
-        self.parse_grammar()
+        self.parse_grammar(grammar_file)
         self.items()
         self.construct_table()
         self.print_info()
         self.LR_parser(tokens)
 
-    def parse_grammar(self):
+    def parse_grammar(self, grammar_file):
+        grammar = list(filter(None, grammar_file.read().splitlines()))
         terminals = set([])
         nonterminals = set([])
 
-        for g in self.grammar:
-            head, _, prods = g.partition(' -> ')
-            prods = [prod.split() for prod in ' '.join(prods.split()).split('|')]
+        for production in grammar:
+            head, _, bodies = production.partition(' -> ')
+            bodies = [body.split() for body in ' '.join(bodies.split()).split('|')]
 
             if not self.start:
                 self.start = f"{head}'"
@@ -39,11 +39,11 @@ class SLRParser:
                 self.G_prime[head] = []
                 nonterminals.add(head)
 
-            for prod in prods:
-                self.G_prime[head].append(prod)
-                self.G_indexed.append([head, prod])
+            for body in bodies:
+                self.G_prime[head].append(body)
+                self.G_indexed.append([head, body])
 
-                for symbol in prod:
+                for symbol in body:
                     if not symbol.isupper() and symbol != '^':
                         terminals.add(symbol)
                     elif symbol.isupper():
@@ -63,18 +63,15 @@ class SLRParser:
                 self.first_seen.append(X)
                 first_len = len(first)
 
-                for prod in self.G_prime[X]:
-                    if prod != ['^']:  # CASE 2
-                        for symbol in prod:
+                for body in self.G_prime[X]:
+                    if body != ['^']:  # CASE 2
+                        for symbol in body:
                             if symbol == X and '^' in first:
                                 continue
 
                             if symbol not in self.first_seen:
                                 symbol_first = self.FIRST(symbol)
-
-                                for sf in symbol_first:
-                                    if sf != '^':
-                                        first.add(sf)
+                                first |= (symbol_first - set('^'))
 
                                 if '^' not in symbol_first:
                                     break
@@ -99,16 +96,16 @@ class SLRParser:
         if A == self.start:  # CASE 1
             follow.add('$')
 
-        for head, prods in self.G_prime.items():
-            for prod in prods:
-                if A in prod[:-1]:  # CASE 2
-                    first = self.FIRST(prod[prod.index(A) + 1])
+        for head, bodies in self.G_prime.items():
+            for body in bodies:
+                if A in body[:-1]:  # CASE 2
+                    first = self.FIRST(body[body.index(A) + 1])
                     follow |= (first - set('^'))
 
                     if '^' in first and head not in self.follow_seen:  # CASE 3
                         follow |= self.FOLLOW(head)
 
-                elif A in prod[-1] and head not in self.follow_seen:  # CASE 3
+                elif A in body[-1] and head not in self.follow_seen:  # CASE 3
                     follow |= self.FOLLOW(head)
 
         self.follow_seen.remove(A)
@@ -121,23 +118,23 @@ class SLRParser:
         while True:
             item_len = len(J)
 
-            for head, prods in J.copy().items():
-                for prod in prods:
-                    if '.' in prod[:-1]:
-                        symbol_after_dot = prod[prod.index('.') + 1]
+            for head, bodies in J.copy().items():
+                for body in bodies:
+                    if '.' in body[:-1]:
+                        symbol_after_dot = body[body.index('.') + 1]
 
                         if symbol_after_dot in self.nonterminals:
-                            for G_prod in self.G_prime[symbol_after_dot]:
-                                if G_prod == ['^']:
+                            for G_body in self.G_prime[symbol_after_dot]:
+                                if G_body == ['^']:
                                     if symbol_after_dot not in J.keys():
                                         J[symbol_after_dot] = [['.']]
                                     elif ['.'] not in J[symbol_after_dot]:
                                         J[symbol_after_dot].append(['.'])
                                 else:
                                     if symbol_after_dot not in J.keys():
-                                        J[symbol_after_dot] = [['.'] + G_prod]
-                                    elif ['.'] + G_prod not in J[symbol_after_dot]:
-                                        J[symbol_after_dot].append(['.'] + G_prod)
+                                        J[symbol_after_dot] = [['.'] + G_body]
+                                    elif ['.'] + G_body not in J[symbol_after_dot]:
+                                        J[symbol_after_dot].append(['.'] + G_body)
 
             if item_len == len(J):
                 return J
@@ -145,20 +142,20 @@ class SLRParser:
     def GOTO(self, I, X):
         goto = {}
 
-        for head, prods in I.items():
-            for prod in prods:
-                if '.' in prod[:-1]:
-                    dot_pos = prod.index('.')
+        for head, bodies in I.items():
+            for body in bodies:
+                if '.' in body[:-1]:
+                    dot_pos = body.index('.')
 
-                    if prod[dot_pos + 1] == X:
-                        for C_head, C_prods in self.CLOSURE(
-                                {head: [prod[:dot_pos] + [X, '.'] + prod[dot_pos + 2:]]}).items():
+                    if body[dot_pos + 1] == X:
+                        for C_head, C_body in self.CLOSURE(
+                                {head: [body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]]}).items():
                             if C_head not in goto.keys():
-                                goto[C_head] = C_prods
+                                goto[C_head] = C_body
                             else:
-                                for C_prod in C_prods:
-                                    if C_prod not in goto[C_head]:
-                                        goto[C_head].append(C_prod)
+                                for C_body in C_body:
+                                    if C_body not in goto[C_head]:
+                                        goto[C_head].append(C_body)
 
         return goto
 
@@ -181,10 +178,10 @@ class SLRParser:
                             range(len(self.C))}
 
         for i, I in enumerate(self.C):
-            for head, prods in I.items():
-                for prod in prods:
-                    if '.' in prod[:-1]:  # CASE 2 a
-                        symbol_after_dot = prod[prod.index('.') + 1]
+            for head, bodies in I.items():
+                for body in bodies:
+                    if '.' in body[:-1]:  # CASE 2 a
+                        symbol_after_dot = body[body.index('.') + 1]
 
                         if symbol_after_dot in self.terminals:
                             s = f's{self.C.index(self.GOTO(I, symbol_after_dot))}'
@@ -195,9 +192,9 @@ class SLRParser:
 
                                 self.parse_table[i][symbol_after_dot] += s
 
-                    elif prod[-1] == '.' and head != self.start:  # CASE 2 b
-                        for j, (G_head, G_prod) in enumerate(self.G_indexed):
-                            if G_head == head and (G_prod == prod[:-1] or G_prod == ['^'] and prod == ['.']):
+                    elif body[-1] == '.' and head != self.start:  # CASE 2 b
+                        for j, (G_head, G_body) in enumerate(self.G_indexed):
+                            if G_head == head and (G_body == body[:-1] or G_body == ['^'] and body == ['.']):
                                 for f in self.FOLLOW(head):
                                     if self.parse_table[i][f]:
                                         self.parse_table[i][f] += '/'
@@ -227,9 +224,9 @@ class SLRParser:
         print('AUGMENTED GRAMMAR:')
 
         i = 0
-        for head, prods in self.G_prime.items():
-            for prod in prods:
-                print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{max_G_prime}} -> {" ".join(prod)}')
+        for head, bodies in self.G_prime.items():
+            for body in bodies:
+                print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{max_G_prime}} -> {" ".join(body)}')
 
                 i += 1
 
@@ -285,11 +282,11 @@ class SLRParser:
         for i, I in enumerate(self.C):
             I_html = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
-            for (head, prods) in I.items():
-                for prod in prods:
+            for (head, bodies) in I.items():
+                for body in bodies:
                     I_html += f'<I>{head:>{max_G_prime}}</I> &#8594;'
 
-                    for symbol in prod:
+                    for symbol in body:
                         if symbol in self.nonterminals:
                             I_html += f' <I>{symbol}</I>'
                         elif symbol in self.terminals:
@@ -365,12 +362,12 @@ class SLRParser:
                 a = buffer[pointer]
 
             elif self.parse_table[s][a].startswith('r'):
-                head, prod = self.G_indexed[int(self.parse_table[s][a][1:])]
-                histories['action'].append(f'reduce by {head} -> {" ".join(prod)}')
+                head, body = self.G_indexed[int(self.parse_table[s][a][1:])]
+                histories['action'].append(f'reduce by {head} -> {" ".join(body)}')
 
-                if prod != ['^']:
-                    stack = stack[:-len(prod)]
-                    symbols = symbols[:-len(prod)]
+                if body != ['^']:
+                    stack = stack[:-len(body)]
+                    symbols = symbols[:-len(body)]
 
                 stack.append(str(self.parse_table[int(stack[-1])][head]))
                 symbols.append(head)
