@@ -8,6 +8,7 @@ import argparse
 class SLRParser:
     def __init__(self, G):
         self.G_prime = Grammar(f"{G.start}' -> {G.start}\n{G.grammar_str}")
+        self.max_G_prime_len = len(max(self.G_prime.grammar.keys(), key=len))
         self.G_indexed = [['', '']]
 
         for head, bodies in self.G_prime.grammar.items():
@@ -162,14 +163,12 @@ class SLRParser:
         def print_line():
             print(f'+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]))}')
 
-        max_G_prime = len(max(self.G_prime.grammar.keys(), key=len))
-
         print('AUGMENTED GRAMMAR:')
 
         i = 0
         for head, bodies in self.G_prime.grammar.items():
             for body in bodies:
-                print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{max_G_prime}} -> {" ".join(body)}')
+                print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{self.max_G_prime_len}} -> {" ".join(body)}')
 
                 i += 1
 
@@ -180,11 +179,11 @@ class SLRParser:
 
         print('\nFIRST:')
         for head in self.G_prime.grammar.keys():
-            print(f'{head:>{max_G_prime}} = {{ {", ".join(self.first[head])} }}')
+            print(f'{head:>{self.max_G_prime_len}} = {{ {", ".join(self.first[head])} }}')
 
         print('\nFOLLOW:')
         for head in self.G_prime.grammar.keys():
-            print(f'{head:>{max_G_prime}} = {{ {", ".join(self.follow[head])} }}')
+            print(f'{head:>{self.max_G_prime_len}} = {{ {", ".join(self.follow[head])} }}')
 
         width = max(len(c) for c in ['ACTION'] + list(self.G_prime.symbols)) + 2
         for r in range(len(self.C)):
@@ -220,14 +219,13 @@ class SLRParser:
 
     def generate_automaton(self):
         automaton = Digraph('automaton', node_attr={'shape': 'record'})
-        max_G_prime = len(max(self.G_prime.grammar.keys(), key=len))
 
         for i, I in enumerate(self.C):
             I_html = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
             for (head, bodies) in I.items():
                 for body in bodies:
-                    I_html += f'<I>{head:>{max_G_prime}}</I> &#8594;'
+                    I_html += f'<I>{head:>{self.max_G_prime_len}}</I> &#8594;'
 
                     for symbol in body:
                         if symbol in self.G_prime.nonterminals:
