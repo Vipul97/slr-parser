@@ -1,116 +1,66 @@
 #!/usr/bin/env python3
 
 from graphviz import Digraph
+from slr_parser.grammar import Grammar
 import argparse
 
 
 class SLRParser:
-    def __init__(self, grammar_file, tokens):
-        self.start = None
-        self.G_prime = {}
+    def __init__(self, G):
+        self.G_prime = Grammar(f"{G.start}' -> {G.start}\n{G.grammar_str}")
         self.G_indexed = [['', '']]
-        self.terminals = None
-        self.nonterminals = None
-        self.symbols = None
-        self.first_seen = []
-        self.follow_seen = []
-        self.C = None
-        self.parse_table = None
-        self.parse_grammar(grammar_file)
-        self.items()
-        self.construct_table()
-        self.print_info()
-        self.LR_parser(tokens)
 
-    def parse_grammar(self, grammar_file):
-        grammar = list(filter(None, grammar_file.read().splitlines()))
-        terminals = set([])
-        nonterminals = set([])
-
-        for production in grammar:
-            head, _, bodies = production.partition(' -> ')
-            bodies = [body.split() for body in ' '.join(bodies.split()).split('|')]
-
-            if not self.start:
-                self.start = f"{head}'"
-                self.G_prime[self.start] = [[head]]
-
-            if head not in self.G_prime:
-                self.G_prime[head] = []
-                nonterminals.add(head)
-
+        for head, bodies in self.G_prime.grammar.items():
             for body in bodies:
-                self.G_prime[head].append(body)
                 self.G_indexed.append([head, body])
 
-                for symbol in body:
-                    if not symbol.isupper() and symbol != '^':
-                        terminals.add(symbol)
-                    elif symbol.isupper():
-                        nonterminals.add(symbol)
+        self.first, self.follow = self.first_follow(self.G_prime)
+        self.C = self.items()
+        self.parse_table = {r: {c: '' for c in list(self.G_prime.terminals) + ['$'] + list(
+            self.G_prime.nonterminals - {self.G_prime.start})} for r in range(len(self.C))}
+        self.construct_table()
 
-        self.terminals = [terminal for terminal in terminals]
-        self.nonterminals = [nonterminal for nonterminal in nonterminals]
-        self.symbols = [symbol for symbol in terminals | nonterminals]
+    def first_follow(self, G):
+        def union(set_1, set_2):
+            set_1_len = len(set_1)
+            set_1 |= set_2
 
-    def FIRST(self, X):
-        if X in self.terminals:  # CASE 1
-            return {X}
-        else:
-            first = set([])
+            return set_1_len != len(set_1)
 
-            while True:
-                self.first_seen.append(X)
-                first_len = len(first)
+        first = {symbol: set([]) for symbol in G.symbols}
+        first.update((terminal, {terminal}) for terminal in G.terminals)
+        follow = {symbol: set([]) for symbol in G.nonterminals}
+        follow[G.start].add('$')
 
-                for body in self.G_prime[X]:
-                    if body != ['^']:  # CASE 2
-                        for symbol in body:
-                            if symbol == X and '^' in first:
-                                continue
+        while True:
+            updated = False
 
-                            if symbol not in self.first_seen:
-                                symbol_first = self.FIRST(symbol)
-                                first |= (symbol_first - set('^'))
+            for head, bodies in G.grammar.items():
+                for body in bodies:
+                    for symbol in body:
+                        if symbol != '^':
+                            updated |= union(first[head], first[symbol] - set('^'))
 
-                                if '^' not in symbol_first:
-                                    break
-
-                            else:
+                            if '^' not in first[symbol]:
                                 break
+                        else:
+                            updated |= union(first[head], set('^'))
+                    else:
+                        updated |= union(first[head], set('^'))
 
-                            first.add('^')
+                    aux = follow[head]
+                    for symbol in reversed(body):
+                        if symbol == '^':
+                            continue
+                        if symbol in follow:
+                            updated |= union(follow[symbol], aux - set('^'))
+                        if '^' in first[symbol]:
+                            aux = aux.union(first[symbol])
+                        else:
+                            aux = first[symbol]
 
-                    else:  # CASE 3
-                        first.add('^')
-
-                self.first_seen.remove(X)
-
-                if first_len == len(first):
-                    return first
-
-    def FOLLOW(self, A):
-        follow = set([])
-        self.follow_seen.append(A)
-
-        if A == self.start:  # CASE 1
-            follow.add('$')
-
-        for head, bodies in self.G_prime.items():
-            for body in bodies:
-                if A in body[:-1]:  # CASE 2
-                    first = self.FIRST(body[body.index(A) + 1])
-                    follow |= (first - set('^'))
-
-                    if '^' in first and head not in self.follow_seen:  # CASE 3
-                        follow |= self.FOLLOW(head)
-
-                elif A in body[-1] and head not in self.follow_seen:  # CASE 3
-                    follow |= self.FOLLOW(head)
-
-        self.follow_seen.remove(A)
-
-        return follow
+            if not updated:
+                return first, follow
 
     def CLOSURE(self, I):
         J = I
@@ -123,8 +73,8 @@ class SLRParser:
                     if '.' in body[:-1]:
                         symbol_after_dot = body[body.index('.') + 1]
 
-                        if symbol_after_dot in self.nonterminals:
-                            for G_body in self.G_prime[symbol_after_dot]:
+                        if symbol_after_dot in self.G_prime.nonterminals:
+                            for G_body in self.G_prime.grammar[symbol_after_dot]:
                                 if G_body == ['^']:
                                     if symbol_after_dot not in J.keys():
                                         J[symbol_after_dot] = [['.']]
@@ -160,30 +110,27 @@ class SLRParser:
         return goto
 
     def items(self):
-        self.C = [self.CLOSURE({self.start: [['.'] + [self.start[:-1]]]})]
+        C = [self.CLOSURE({self.G_prime.start: [['.'] + [self.G_prime.start[:-1]]]})]
 
         while True:
-            item_len = len(self.C)
+            item_len = len(C)
 
-            for I in self.C.copy():
-                for X in self.symbols:
-                    if self.GOTO(I, X) and self.GOTO(I, X) not in self.C:
-                        self.C.append(self.GOTO(I, X))
+            for I in C.copy():
+                for X in self.G_prime.symbols:
+                    if self.GOTO(I, X) and self.GOTO(I, X) not in C:
+                        C.append(self.GOTO(I, X))
 
-            if item_len == len(self.C):
-                return
+            if item_len == len(C):
+                return C
 
     def construct_table(self):
-        self.parse_table = {r: {c: '' for c in self.terminals + ['$'] + self.nonterminals} for r in
-                            range(len(self.C))}
-
         for i, I in enumerate(self.C):
             for head, bodies in I.items():
                 for body in bodies:
                     if '.' in body[:-1]:  # CASE 2 a
                         symbol_after_dot = body[body.index('.') + 1]
 
-                        if symbol_after_dot in self.terminals:
+                        if symbol_after_dot in self.G_prime.terminals:
                             s = f's{self.C.index(self.GOTO(I, symbol_after_dot))}'
 
                             if s not in self.parse_table[i][symbol_after_dot]:
@@ -192,10 +139,10 @@ class SLRParser:
 
                                 self.parse_table[i][symbol_after_dot] += s
 
-                    elif body[-1] == '.' and head != self.start:  # CASE 2 b
+                    elif body[-1] == '.' and head != self.G_prime.start:  # CASE 2 b
                         for j, (G_head, G_body) in enumerate(self.G_indexed):
                             if G_head == head and (G_body == body[:-1] or G_body == ['^'] and body == ['.']):
-                                for f in self.FOLLOW(head):
+                                for f in self.follow[head]:
                                     if self.parse_table[i][f]:
                                         self.parse_table[i][f] += '/'
 
@@ -206,7 +153,7 @@ class SLRParser:
                     else:  # CASE 2 c
                         self.parse_table[i]['$'] = 'acc'
 
-            for A in self.nonterminals:  # CASE 3
+            for A in self.G_prime.nonterminals:  # CASE 3
                 j = self.GOTO(I, A)
 
                 if j in self.C:
@@ -217,33 +164,33 @@ class SLRParser:
             print(f'{text:>13}: {", ".join(variable)}')
 
         def print_line():
-            print(f'+{("-" * width + "+") * (len(self.symbols + ["$"]) + 1)}')
+            print(f'+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]))}')
 
-        max_G_prime = len(max(self.G_prime.keys(), key=len))
+        max_G_prime = len(max(self.G_prime.grammar.keys(), key=len))
 
         print('AUGMENTED GRAMMAR:')
 
         i = 0
-        for head, bodies in self.G_prime.items():
+        for head, bodies in self.G_prime.grammar.items():
             for body in bodies:
                 print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{max_G_prime}} -> {" ".join(body)}')
 
                 i += 1
 
         print()
-        fprint('TERMINALS', self.terminals)
-        fprint('NONTERMINALS', self.nonterminals)
-        fprint('SYMBOLS', self.symbols)
+        fprint('TERMINALS', self.G_prime.terminals)
+        fprint('NONTERMINALS', self.G_prime.nonterminals)
+        fprint('SYMBOLS', self.G_prime.symbols)
 
         print('\nFIRST:')
-        for head in self.G_prime.keys():
-            print(f'{head:>{max_G_prime}} = {{ {", ".join(self.FIRST(head))} }}')
+        for head in self.G_prime.grammar.keys():
+            print(f'{head:>{max_G_prime}} = {{ {", ".join(self.first[head])} }}')
 
         print('\nFOLLOW:')
-        for head in self.G_prime.keys():
-            print(f'{head:>{max_G_prime}} = {{ {", ".join(self.FOLLOW(head))} }}')
+        for head in self.G_prime.grammar.keys():
+            print(f'{head:>{max_G_prime}} = {{ {", ".join(self.follow[head])} }}')
 
-        width = max(len(c) for c in ['ACTION'] + self.symbols) + 2
+        width = max(len(c) for c in ['ACTION'] + list(self.G_prime.symbols)) + 2
         for r in range(len(self.C)):
             max_len = max(len(str(c)) for c in self.parse_table[r].values())
 
@@ -252,13 +199,13 @@ class SLRParser:
 
         print('\nPARSING TABLE:')
         print(
-            f'+{"-" * width}+{"-" * ((width + 1) * len(self.terminals + ["$"]) - 1)}+{"-" * ((width + 1) * len(self.nonterminals) - 1)}+')
+            f'+{"-" * width}+{"-" * ((width + 1) * len(list(self.G_prime.terminals) + ["$"]) - 1)}+{"-" * ((width + 1) * (len(self.G_prime.nonterminals) - 1) - 1)}+')
         print(
-            f'|{"":{width}}|{"ACTION":^{(width + 1) * len(self.terminals + ["$"]) - 1}}|{"GOTO":^{(width + 1) * len(self.nonterminals) - 1}}|')
-        print(f'|{"STATE":^{width}}+{("-" * width + "+") * len(self.symbols + ["$"])}')
+            f'|{"":{width}}|{"ACTION":^{(width + 1) * len(list(self.G_prime.terminals) + ["$"]) - 1}}|{"GOTO":^{(width + 1) * (len(self.G_prime.nonterminals) - 1) - 1}}|')
+        print(f'|{"STATE":^{width}}+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]) - 1)}')
         print(f'|{"":^{width}}|', end=' ')
 
-        for symbol in self.terminals + ['$'] + self.nonterminals:
+        for symbol in list(self.G_prime.terminals) + ['$'] + list(self.G_prime.nonterminals - {self.G_prime.start}):
             print(f'{symbol:^{width - 1}}|', end=' ')
 
         print()
@@ -267,7 +214,7 @@ class SLRParser:
         for r in range(len(self.C)):
             print(f'|{r:^{width}}|', end=' ')
 
-            for c in self.terminals + ['$'] + self.nonterminals:
+            for c in list(self.G_prime.terminals) + ['$'] + list(self.G_prime.nonterminals - {self.G_prime.start}):
                 print(f'{self.parse_table[r][c]:^{width - 1}}|', end=' ')
 
             print()
@@ -277,7 +224,7 @@ class SLRParser:
 
     def generate_automaton(self):
         automaton = Digraph('automaton', node_attr={'shape': 'record'})
-        max_G_prime = len(max(self.G_prime.keys(), key=len))
+        max_G_prime = len(max(self.G_prime.grammar.keys(), key=len))
 
         for i, I in enumerate(self.C):
             I_html = f'<<I>I</I><SUB>{i}</SUB><BR/>'
@@ -287,9 +234,9 @@ class SLRParser:
                     I_html += f'<I>{head:>{max_G_prime}}</I> &#8594;'
 
                     for symbol in body:
-                        if symbol in self.nonterminals:
+                        if symbol in self.G_prime.nonterminals:
                             I_html += f' <I>{symbol}</I>'
-                        elif symbol in self.terminals:
+                        elif symbol in self.G_prime.terminals:
                             I_html += f' <B>{symbol}</B>'
                         else:
                             I_html += f' {symbol}'
@@ -299,7 +246,7 @@ class SLRParser:
             automaton.node(f'I{i}', f'{I_html}>')
 
         for r in range(len(self.C)):
-            for c in self.terminals + ['$'] + self.nonterminals:
+            for c in list(self.G_prime.terminals) + ['$'] + list(self.G_prime.nonterminals):
                 if isinstance(self.parse_table[r][c], int):
                     automaton.edge(f'I{r}', f'I{self.parse_table[r][c]}', label=f'<<I>{c}</I>>')
 
@@ -309,7 +256,7 @@ class SLRParser:
                     if '/' in i:
                         i = i[:i.index('/')]
 
-                    automaton.edge(f'I{r}', f'I{i}', label=f'<<B>{c}</B>>' if c in self.terminals else c)
+                    automaton.edge(f'I{r}', f'I{i}', label=f'<<B>{c}</B>>' if c in self.G_prime.terminals else c)
 
                 elif self.parse_table[r][c] == 'acc':
                     automaton.node('acc', '<<B>accept</B>>', shape='none')
@@ -400,7 +347,10 @@ if __name__ == "__main__":
     parser.add_argument('tokens', help='tokens to be parsed - all tokens are separated with spaces')
     args = parser.parse_args()
 
-    slr_parser = SLRParser(args.grammar_file, args.tokens)
+    G = Grammar(args.grammar_file.read())
+    slr_parser = SLRParser(G)
+    slr_parser.print_info()
+    slr_parser.LR_parser(args.tokens)
 
     if args.g:
         slr_parser.generate_automaton()

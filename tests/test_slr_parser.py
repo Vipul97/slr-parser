@@ -1,37 +1,168 @@
+from slr_parser.grammar import Grammar
 from slr_parser.slr_parser import SLRParser
 import unittest
 
 
 class TestSLRParser(unittest.TestCase):
     def setUp(self):
-        with open('test_grammar.txt') as grammar_file:
-            self.slr_parser = SLRParser(grammar_file, 'id + id * id')
+        with open('tests/test_grammar.txt') as grammar_file:
+            self.G = Grammar(grammar_file.read())
+            self.slr_parser = SLRParser(self.G)
 
-    def test_parse_grammar(self):
-        self.assertEqual("E'", self.slr_parser.start)
-        self.assertDictEqual({"E'": [['E']], 'E': [['E', '+', 'T'], ['T']], 'T': [['T', '*', 'F'], ['F']],
-                              'F': [['(', 'E', ')'], ['id']]}, self.slr_parser.G_prime)
-        self.assertListEqual([['', ''], ['E', ['E', '+', 'T']], ['E', ['T']], ['T', ['T', '*', 'F']], ['T', ['F']],
-                              ['F', ['(', 'E', ')']], ['F', ['id']]], self.slr_parser.G_indexed)
-        self.assertSetEqual({'+', '*', '(', ')', 'id'}, set(self.slr_parser.terminals))
-        self.assertSetEqual({'E', 'T', 'F'}, set(self.slr_parser.nonterminals))
-        self.assertSetEqual({'+', '*', '(', ')', 'id', 'E', 'T', 'F'}, set(self.slr_parser.symbols))
+    def test_first_follow(self):
+        self.grammar_strs = ["""E -> E + T
+E -> T
+T -> T * F | F
+F -> ( E )
+F -> id""", """E -> T E'
+E' -> + T E' | ^
+T -> F T'
+T' -> * F T' | ^
+F -> ( E ) | id""", """E -> T X
+X -> + E
+X -> ^
+T -> int Y
+T -> ( E )
+Y -> * T
+Y -> ^""", """S -> a B D h
+B -> c C
+C -> b C | ^
+D -> E F
+E -> g | ^
+F -> f | ^""", """S -> A
+A -> a B | A d
+B -> b
+C -> g""", """S -> ( L ) | a
+L -> S L'
+L' -> , S L' | ^""", """S -> A a A b | B b B a
+A -> ^
+B -> ^""", """S -> A C B | C b B | B a
+A -> d a | B C
+B -> g | ^
+C -> h | ^"""]
 
-    def test_FIRST(self):
-        self.assertEqual({'id'}, self.slr_parser.FIRST('id'))
-        self.assertEqual({'(', 'id'}, self.slr_parser.FIRST('E'))
+        with self.subTest(grammar_str=self.grammar_strs[0]):
+            self.G = Grammar(self.grammar_strs[0])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'(', 'id'}, first['E'])
+            self.assertSetEqual({'(', 'id'}, first['T'])
+            self.assertSetEqual({'(', 'id'}, first['F'])
+            self.assertSetEqual({'$', '+', ')'}, follow['E'])
+            self.assertSetEqual({'$', '+', '*', ')'}, follow['T'])
+            self.assertSetEqual({'$', '+', '*', ')'}, follow['F'])
 
-    def test_FOLLOW(self):
-        self.assertEqual({'$'}, self.slr_parser.FOLLOW(self.slr_parser.start))
+        with self.subTest(grammar_str=self.grammar_strs[1]):
+            self.G = Grammar(self.grammar_strs[1])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'(', 'id'}, first['E'])
+            self.assertSetEqual({'(', 'id'}, first['T'])
+            self.assertSetEqual({'(', 'id'}, first['F'])
+            self.assertSetEqual({'+', '^'}, first["E'"])
+            self.assertSetEqual({'*', '^'}, first["T'"])
+            self.assertSetEqual({')', '$'}, follow['E'])
+            self.assertSetEqual({')', '$'}, follow["E'"])
+            self.assertSetEqual({'+', ')', '$'}, follow['T'])
+            self.assertSetEqual({'+', ')', '$'}, follow["T'"])
+            self.assertSetEqual({'+', '*', ')', '$'}, follow['F'])
+
+        with self.subTest(grammar_str=self.grammar_strs[2]):
+            self.G = Grammar(self.grammar_strs[2])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'('}, first['('])
+            self.assertSetEqual({')'}, first[')'])
+            self.assertSetEqual({'+'}, first['+'])
+            self.assertSetEqual({'*'}, first['*'])
+            self.assertSetEqual({'int'}, first['int'])
+            self.assertSetEqual({'^', '*'}, first['Y'])
+            self.assertSetEqual({'^', '+'}, first['X'])
+            self.assertSetEqual({'int', '('}, first['T'])
+            self.assertSetEqual({'int', '('}, first['E'])
+            self.assertSetEqual({')', '$', '+'}, follow['Y'])
+            self.assertSetEqual({')', '$'}, follow['X'])
+            self.assertSetEqual({')', '$', '+'}, follow['T'])
+            self.assertSetEqual({')', '$'}, follow['E'])
+
+        with self.subTest(grammar_str=self.grammar_strs[3]):
+            self.G = Grammar(self.grammar_strs[3])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'a'}, first['S'])
+            self.assertSetEqual({'c'}, first['B'])
+            self.assertSetEqual({'b', '^'}, first['C'])
+            self.assertSetEqual({'g', 'f', '^'}, first['D'])
+            self.assertSetEqual({'g', '^'}, first['E'])
+            self.assertSetEqual({'f', '^'}, first['F'])
+            self.assertSetEqual({'$'}, follow['S'])
+            self.assertSetEqual({'g', 'f', 'h'}, follow['B'])
+            self.assertSetEqual({'g', 'f', 'h'}, follow['C'])
+            self.assertSetEqual({'h'}, follow['D'])
+            self.assertSetEqual({'f', 'h'}, follow['E'])
+            self.assertSetEqual({'h'}, follow['F'])
+
+        with self.subTest(grammar_str=self.grammar_strs[4]):
+            self.G = Grammar(self.grammar_strs[4])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'a'}, first['S'])
+            self.assertSetEqual({'a'}, first['A'])
+            self.assertSetEqual({'b'}, first['B'])
+            self.assertSetEqual({'g'}, first['C'])
+            self.assertSetEqual({'$'}, follow['S'])
+            self.assertSetEqual({'$', 'd'}, follow['A'])
+            self.assertSetEqual({'$', 'd'}, follow['B'])
+            self.assertSetEqual(set([]), follow['C'])
+
+        with self.subTest(grammar_str=self.grammar_strs[5]):
+            self.G = Grammar(self.grammar_strs[5])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'(', 'a'}, first['S'])
+            self.assertSetEqual({'(', 'a'}, first['L'])
+            self.assertSetEqual({',', '^'}, first["L'"])
+            self.assertSetEqual({'$', ',', ')'}, follow['S'])
+            self.assertSetEqual({')'}, follow['L'])
+            self.assertSetEqual({')'}, follow["L'"])
+
+        with self.subTest(grammar_str=self.grammar_strs[6]):
+            self.G = Grammar(self.grammar_strs[6])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'a', 'b'}, first['S'])
+            self.assertSetEqual({'^'}, first['A'])
+            self.assertSetEqual({'^'}, first['B'])
+            self.assertSetEqual({'$'}, follow['S'])
+            self.assertSetEqual({'a', 'b'}, follow['A'])
+            self.assertSetEqual({'a', 'b'}, follow['B'])
+
+        with self.subTest(grammar_str=self.grammar_strs[7]):
+            self.G = Grammar(self.grammar_strs[7])
+            first, follow = SLRParser(self.G).first_follow(self.G)
+            self.assertSetEqual({'d', 'g', 'h', '^', 'b', 'a'}, first['S'])
+            self.assertSetEqual({'d', 'g', 'h', '^'}, first['A'])
+            self.assertSetEqual({'g', '^'}, first['B'])
+            self.assertSetEqual({'h', '^'}, first['C'])
+            self.assertSetEqual({'$'}, follow['S'])
+            self.assertSetEqual({'h', 'g', '$'}, follow['A'])
+            self.assertSetEqual({'$', 'a', 'h', 'g'}, follow['B'])
+            self.assertSetEqual({'g', '$', 'b', 'h'}, follow['C'])
 
     def test_CLOSURE(self):
         self.assertDictEqual(
             {"E'": [['.', 'E']], 'E': [['.', 'E', '+', 'T'], ['.', 'T']], 'T': [['.', 'T', '*', 'F'], ['.', 'F']],
              'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-            self.slr_parser.CLOSURE({self.slr_parser.start: [['.'] + [self.slr_parser.start[:-1]]]}))
+            self.slr_parser.CLOSURE({self.slr_parser.G_prime.start: [['.'] + [self.slr_parser.G_prime.start[:-1]]]}))
 
     def test_GOTO(self):
-        self.assertDictEqual({"E'": [['E', '.']]}, self.slr_parser.GOTO({"E'": [['.', 'E']]}, 'E'))
+        self.assertDictEqual({'E': [['E', '+', '.', 'T']], 'T': [['.', 'T', '*', 'F'], ['.', 'F']],
+                              'F': [['.', '(', 'E', ')'], ['.', 'id']]},
+                             self.slr_parser.GOTO({"E'": [['E', '.']], 'E': [['E', '.', '+', 'T']]}, '+'))
+
+    def test_items(self):
+        self.slr_parser.items()
+
+    def test_construct_table(self):
+        self.slr_parser.construct_table()
+
+    def test_LR_parser(self):
+        self.slr_parser.LR_parser('id - id')
+        self.slr_parser.LR_parser('+ id')
+        self.slr_parser.LR_parser('id + id * id')
 
 
 if __name__ == "__main__":
