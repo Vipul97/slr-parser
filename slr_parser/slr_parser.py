@@ -56,7 +56,7 @@ class SLRParser:
                         if symbol in follow:
                             updated |= union(follow[symbol], aux - set('^'))
                         if '^' in first[symbol]:
-                            aux = aux.union(first[symbol])
+                            aux = aux | first[symbol]
                         else:
                             aux = first[symbol]
 
