@@ -100,12 +100,7 @@ class SLRParser:
                     if body[dot_pos + 1] == X:
                         for C_head, C_bodies in self.CLOSURE(
                                 {head: [body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]]}).items():
-                            if C_head not in goto.keys():
-                                goto[C_head] = C_bodies
-                            else:
-                                for C_body in C_bodies:
-                                    if C_body not in goto[C_head]:
-                                        goto[C_head].append(C_body)
+                            goto[C_head] = C_bodies
 
         return goto
 
