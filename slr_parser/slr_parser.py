@@ -15,7 +15,7 @@ class SLRParser:
                 self.G_indexed.append([head, body])
 
         self.first, self.follow = self.first_follow(self.G_prime)
-        self.C = self.items()
+        self.C = self.items(self.G_prime)
         self.parse_table_symbols = list(self.G_prime.terminals) + ['$'] + list(
             self.G_prime.nonterminals - {self.G_prime.start})
         self.parse_table = {r: {c: '' for c in self.parse_table_symbols} for r in range(len(self.C))}
@@ -105,14 +105,14 @@ class SLRParser:
 
         return goto
 
-    def items(self):
-        C = [self.CLOSURE({self.G_prime.start: [['.'] + [self.G_prime.start[:-1]]]})]
+    def items(self, G_prime):
+        C = [self.CLOSURE({G_prime.start: [['.'] + [G_prime.start[:-1]]]})]
 
         while True:
             item_len = len(C)
 
             for I in C.copy():
-                for X in self.G_prime.symbols:
+                for X in G_prime.symbols:
                     if self.GOTO(I, X) and self.GOTO(I, X) not in C:
                         C.append(self.GOTO(I, X))
 

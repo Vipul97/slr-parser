@@ -154,7 +154,7 @@ C -> h | ^"""]
                              self.slr_parser.GOTO({"E'": [['E', '.']], 'E': [['E', '.', '+', 'T']]}, '+'))
 
     def test_items(self):
-        self.slr_parser.items()
+        self.slr_parser.items(self.slr_parser.G_prime)
 
     def test_construct_table(self):
         self.slr_parser.construct_table()
