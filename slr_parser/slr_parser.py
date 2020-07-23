@@ -16,8 +16,9 @@ class SLRParser:
 
         self.first, self.follow = self.first_follow(self.G_prime)
         self.C = self.items()
-        self.parse_table = {r: {c: '' for c in list(self.G_prime.terminals) + ['$'] + list(
-            self.G_prime.nonterminals - {self.G_prime.start})} for r in range(len(self.C))}
+        self.parse_table_symbols = list(self.G_prime.terminals) + ['$'] + list(
+            self.G_prime.nonterminals - {self.G_prime.start})
+        self.parse_table = {r: {c: '' for c in self.parse_table_symbols} for r in range(len(self.C))}
         self.construct_table()
 
     def first_follow(self, G):
@@ -200,7 +201,7 @@ class SLRParser:
         print(f'|{"STATE":^{width}}+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]) - 1)}')
         print(f'|{"":^{width}}|', end=' ')
 
-        for symbol in list(self.G_prime.terminals) + ['$'] + list(self.G_prime.nonterminals - {self.G_prime.start}):
+        for symbol in self.parse_table_symbols:
             print(f'{symbol:^{width - 1}}|', end=' ')
 
         print()
@@ -209,7 +210,7 @@ class SLRParser:
         for r in range(len(self.C)):
             print(f'|{r:^{width}}|', end=' ')
 
-            for c in list(self.G_prime.terminals) + ['$'] + list(self.G_prime.nonterminals - {self.G_prime.start}):
+            for c in self.parse_table_symbols:
                 print(f'{self.parse_table[r][c]:^{width - 1}}|', end=' ')
 
             print()
@@ -241,7 +242,7 @@ class SLRParser:
             automaton.node(f'I{i}', f'{I_html}>')
 
         for r in range(len(self.C)):
-            for c in list(self.G_prime.terminals) + ['$'] + list(self.G_prime.nonterminals):
+            for c in self.parse_table_symbols:
                 if isinstance(self.parse_table[r][c], int):
                     automaton.edge(f'I{r}', f'I{self.parse_table[r][c]}', label=f'<<I>{c}</I>>')
 
