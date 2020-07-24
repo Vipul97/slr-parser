@@ -19,8 +19,7 @@ class SLRParser:
         self.C = self.items(self.G_prime)
         self.parse_table_symbols = list(self.G_prime.terminals) + ['$'] + list(
             self.G_prime.nonterminals - {self.G_prime.start})
-        self.parse_table = {r: {c: '' for c in self.parse_table_symbols} for r in range(len(self.C))}
-        self.construct_table()
+        self.parse_table = self.construct_table()
 
     def first_follow(self, G):
         def union(set_1, set_2):
@@ -121,6 +120,8 @@ class SLRParser:
                 return C
 
     def construct_table(self):
+        parse_table = {r: {c: '' for c in self.parse_table_symbols} for r in range(len(self.C))}
+
         for i, I in enumerate(self.C):
             for head, bodies in I.items():
                 for body in bodies:
@@ -130,31 +131,33 @@ class SLRParser:
                         if symbol_after_dot in self.G_prime.terminals:
                             s = f's{self.C.index(self.GOTO(I, symbol_after_dot))}'
 
-                            if s not in self.parse_table[i][symbol_after_dot]:
-                                if 'r' in self.parse_table[i][symbol_after_dot]:
-                                    self.parse_table[i][symbol_after_dot] += '/'
+                            if s not in parse_table[i][symbol_after_dot]:
+                                if 'r' in parse_table[i][symbol_after_dot]:
+                                    parse_table[i][symbol_after_dot] += '/'
 
-                                self.parse_table[i][symbol_after_dot] += s
+                                parse_table[i][symbol_after_dot] += s
 
                     elif body[-1] == '.' and head != self.G_prime.start:  # CASE 2 b
                         for j, (G_head, G_body) in enumerate(self.G_indexed):
                             if G_head == head and (G_body == body[:-1] or G_body == ['^'] and body == ['.']):
                                 for f in self.follow[head]:
-                                    if self.parse_table[i][f]:
-                                        self.parse_table[i][f] += '/'
+                                    if parse_table[i][f]:
+                                        parse_table[i][f] += '/'
 
-                                    self.parse_table[i][f] += f'r{j}'
+                                    parse_table[i][f] += f'r{j}'
 
                                 break
 
                     else:  # CASE 2 c
-                        self.parse_table[i]['$'] = 'acc'
+                        parse_table[i]['$'] = 'acc'
 
             for A in self.G_prime.nonterminals:  # CASE 3
                 j = self.GOTO(I, A)
 
                 if j in self.C:
-                    self.parse_table[i][A] = self.C.index(j)
+                    parse_table[i][A] = self.C.index(j)
+
+        return parse_table
 
     def print_info(self):
         def fprint(text, variable):
@@ -259,52 +262,49 @@ class SLRParser:
         automaton.view()
 
     def LR_parser(self, w):
-        def print_line():
-            print(f'{"".join(["+" + ("-" * (max_len + 2)) for max_len in max_lens.values()])}+')
-
         buffer = f'{w} $'.split()
         pointer = 0
         a = buffer[pointer]
         stack = ['0']
         symbols = ['']
-        histories = {'step': [''], 'stack': ['STACK'] + stack, 'symbols': ['SYMBOLS'] + symbols, 'input': ['INPUT'],
+        results = {'step': [''], 'stack': ['STACK'] + stack, 'symbols': ['SYMBOLS'] + symbols, 'input': ['INPUT'],
                      'action': ['ACTION']}
 
         step = 0
         while True:
             s = int(stack[-1])
             step += 1
-            histories['step'].append(f'({step})')
-            histories['input'].append(' '.join(buffer[pointer:]))
+            results['step'].append(f'({step})')
+            results['input'].append(' '.join(buffer[pointer:]))
 
             if a not in self.parse_table[s].keys():
-                histories['action'].append(f'ERROR: unrecognized symbol {a}')
+                results['action'].append(f'ERROR: unrecognized symbol {a}')
 
                 break
 
             elif not self.parse_table[s][a]:
-                histories['action'].append('ERROR: input cannot be parsed by given grammar')
+                results['action'].append('ERROR: input cannot be parsed by given grammar')
 
                 break
 
             elif '/' in self.parse_table[s][a]:
-                histories['action'].append(
+                results['action'].append(
                     f'ERROR: {"reduce" if self.parse_table[s][a].count("r") > 1 else "shift"}-reduce conflict at state {s}, symbol {a}')
 
                 break
 
             elif self.parse_table[s][a].startswith('s'):
-                histories['action'].append('shift')
+                results['action'].append('shift')
                 stack.append(self.parse_table[s][a][1:])
                 symbols.append(a)
-                histories['stack'].append(' '.join(stack))
-                histories['symbols'].append(' '.join(symbols))
+                results['stack'].append(' '.join(stack))
+                results['symbols'].append(' '.join(symbols))
                 pointer += 1
                 a = buffer[pointer]
 
             elif self.parse_table[s][a].startswith('r'):
                 head, body = self.G_indexed[int(self.parse_table[s][a][1:])]
-                histories['action'].append(f'reduce by {head} -> {" ".join(body)}')
+                results['action'].append(f'reduce by {head} -> {" ".join(body)}')
 
                 if body != ['^']:
                     stack = stack[:-len(body)]
@@ -312,24 +312,30 @@ class SLRParser:
 
                 stack.append(str(self.parse_table[int(stack[-1])][head]))
                 symbols.append(head)
-                histories['stack'].append(' '.join(stack))
-                histories['symbols'].append(' '.join(symbols))
+                results['stack'].append(' '.join(stack))
+                results['symbols'].append(' '.join(symbols))
 
             elif self.parse_table[s][a] == 'acc':
-                histories['action'].append('accept')
+                results['action'].append('accept')
 
                 break
 
-        max_lens = {key: max(len(value) for value in histories[key]) for key in histories.keys()}
+        return results
+
+    def print_LR_parser(self, results):
+        def print_line():
+            print(f'{"".join(["+" + ("-" * (max_len + 2)) for max_len in max_lens.values()])}+')
+
+        max_lens = {key: max(len(value) for value in results[key]) for key in results.keys()}
         justs = {'step': '>', 'stack': '', 'symbols': '', 'input': '>', 'action': ''}
 
         print_line()
         print(''.join(
-            [f'| {history[0]:^{max_len}} ' for history, max_len in zip(histories.values(), max_lens.values())]) + '|')
+            [f'| {history[0]:^{max_len}} ' for history, max_len in zip(results.values(), max_lens.values())]) + '|')
         print_line()
-        for i, step in enumerate(histories['step'][:-1], 1):
+        for i, step in enumerate(results['step'][:-1], 1):
             print(''.join([f'| {history[i]:{just}{max_len}} ' for history, just, max_len in
-                           zip(histories.values(), justs.values(), max_lens.values())]) + '|')
+                           zip(results.values(), justs.values(), max_lens.values())]) + '|')
 
         print_line()
 
@@ -344,7 +350,8 @@ if __name__ == "__main__":
     G = Grammar(args.grammar_file.read())
     slr_parser = SLRParser(G)
     slr_parser.print_info()
-    slr_parser.LR_parser(args.tokens)
+    results = slr_parser.LR_parser(args.tokens)
+    slr_parser.print_LR_parser(results)
 
     if args.g:
         slr_parser.generate_automaton()
