@@ -1,2 +1,4 @@
-tox==3.14.0
-graphviz==0.14.1
+flake8
+tox
+coverage
+graphviz
