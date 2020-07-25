@@ -268,7 +268,7 @@ class SLRParser:
         stack = ['0']
         symbols = ['']
         results = {'step': [''], 'stack': ['STACK'] + stack, 'symbols': ['SYMBOLS'] + symbols, 'input': ['INPUT'],
-                     'action': ['ACTION']}
+                   'action': ['ACTION']}
 
         step = 0
         while True:
@@ -288,8 +288,8 @@ class SLRParser:
                 break
 
             elif '/' in self.parse_table[s][a]:
-                results['action'].append(
-                    f'ERROR: {"reduce" if self.parse_table[s][a].count("r") > 1 else "shift"}-reduce conflict at state {s}, symbol {a}')
+                action = 'reduce' if self.parse_table[s][a].count('r') > 1 else 'shift'
+                results['action'].append(f'ERROR: {action}-reduce conflict at state {s}, symbol {a}')
 
                 break
 
