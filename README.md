@@ -101,7 +101,7 @@ git clone git://github.com/Vipul97/slr-parser
 Or download the [tarball](https://github.com/Vipul97/slr-parser/tarball/master):
 
 ```
-curl -OJL https://github.com/Vipul97/slrparser/tarball/master
+curl -OJL https://github.com/Vipul97/slr-parser/tarball/master
 ```
 
 Once you have a copy of the source, you can install it with:
