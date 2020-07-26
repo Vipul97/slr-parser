@@ -23,19 +23,19 @@ The sources for slr-parser can be downloaded from the [Github repo](https://gith
 You can either clone the public repository:
 
 ```
-$ git clone git://github.com/Vipul97/slr-parser
+git clone git://github.com/Vipul97/slr-parser
 ```
 
 Or download the [tarball](https://github.com/Vipul97/slr-parser/tarball/master):
 
 ```
-$ curl -OJL https://github.com/Vipul97/slrparser/tarball/master
+curl -OJL https://github.com/Vipul97/slrparser/tarball/master
 ```
 
 Once you have a copy of the source, you can install it with:
 
 ```
-$ python setup.py install
+python setup.py install
 ```
 
 ## Dependencies
@@ -69,4 +69,4 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code of conduct, a
 
 # License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
