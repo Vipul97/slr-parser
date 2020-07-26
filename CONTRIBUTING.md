@@ -94,8 +94,10 @@ To run a subset of tests:
 
 A reminder for the maintainers on how to deploy. Make sure all your changes are committed. Then run:
 
-    bump2version patch \# possible: major / minor / patch
+    bump2version patch
     git push
     git push --tags
+
+bump2version options: major / minor / patch.
 
 Travis will then deploy to PyPI if tests pass.
