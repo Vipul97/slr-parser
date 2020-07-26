@@ -65,7 +65,7 @@ $ python setup.py install
 
 # Contributing
 
-Please read [CONTRIBUTING.md](https://github.com/Vipul97/slr-parser/blob/master/CONTRIBUTING.md) for details on code of conduct, and the process for submitting pull requests.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code of conduct, and the process for submitting pull requests.
 
 # License
 
