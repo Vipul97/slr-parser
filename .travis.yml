@@ -2,16 +2,26 @@ os: linux
 dist: xenial
 language: python
 python:
-  - "3.6"
-  - "3.7"
-  - "3.8"
+- '3.6'
+- '3.7'
+- '3.8'
 install:
-  - pip install -r requirements.txt
-  - pip install tox-travis
-  - pip install coverage
-  - pip install codecov
+- pip install -r requirements.txt
+- pip install tox-travis
+- pip install coverage
+- pip install codecov
 script:
-  - tox
-  - coverage run -m unittest discover
+- tox
+- coverage run -m unittest discover
 after_success:
-  - codecov
+- codecov
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: Vipul97
+  password:
+    secure: sWZBTKgjrVqsKc3J5VDM2etu0hBAgOsxjbfocghTRwFYZMGO6pPp0HUsBy4cTPuQb6KJkHoG2IQE6NIYkqltEWYgtDMNYle+K4eD5c6F0joh4bJqr0t7WFLiIthvRCIfOh5kmy4jnZqR67N/MkZSgRUHMMovDwHkNN8YguwVqziYd3TpCfF2IN9rWtnoBxOzKe3qpQ9Q+1B0Dfaj8GexKGCkr3GY+beMOGtxAZS3hO5RxBoPktbp+I7f3i2Ah0HvVTgoUFp6PHam4HT+ztNxYmHZEnpeTC3xpD51zz0AcVk7x+pi56MT0pFtNcZQQGPvkdO2ik9x1Clw+aU3r8bBoMNdncJXJIDgfXCiZvt9dJvLB09wARrTJ0jGai71eacOHFIduxF9YronhVei9dxkKzMiOvGIDMpqCaQy8+OTTpuobHxiCba7s3Xh518RhZ/TNed3PM6FatUgGKGY7ElKGTAt1YBIiuv+H8k1SkIhUZcb6d8yKfEZG65MxfRePtDvBfznZ1mHRgeMxjy1WbyXmE7teWOBWx8SPnipb/p/6VDv6dTJTJFraleKiKZ7SLtI9SKQMuyRM176sZFkevmjUpp2SK3b9nVet+c5MZ2nELVjw92tmmoU3o2AzlhGRVxgGH29zCcfSl02GoRgOOclaHo127qEgY7lcWr+tkFvvIo=
+  on:
+    tags: true
+    repo: Vipul97/slr_parser
+    python: 3.8
