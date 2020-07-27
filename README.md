@@ -76,6 +76,9 @@ PARSING TABLE:
 
 # Installation
 
+## Requirements
+* Python 3.6+
+
 ## Stable release
 
 To install slr-parser, run this command in your terminal:
@@ -110,8 +113,7 @@ Once you have a copy of the source, you can install it with:
 python setup.py install
 ```
 
-## Dependencies
-* Graphviz
+# Usage
 
 ## Grammar Syntax
 * For every production, the head and the body of the production is separated by ``` -> ```.
@@ -120,20 +122,17 @@ python setup.py install
 * The choice operator ``` | ``` can be used in the body of the production to match either the expression before or the expression after the operator.
 * ```^``` is treated as the null symbol.
 
-## Instructions
-1. Run `slr_parser/slr_parser.py`.
+Run `slr_parser/slr_parser.py`.
+    
+    usage: slr_parser.py [-h] [-g] grammar_file tokens
 
-        usage: slr_parser.py [-h] [-g] grammar_file tokens
-
-        positional arguments:
-          grammar_file  text file to be used as grammar
-          tokens        tokens to be parsed - all tokens are separated with spaces
-        
-        optional arguments:
-          -h, --help    show this help message and exit
-          -g            generate automaton
-
-2. Input the tokens to be parsed. All tokens are separated by spaces.
+    positional arguments:
+      grammar_file  text file to be used as grammar
+      tokens        tokens to be parsed - all tokens are separated with spaces
+    
+    optional arguments:
+      -h, --help    show this help message and exit
+      -g            generate automaton
 
 # Contributing
 
