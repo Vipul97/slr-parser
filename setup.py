@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='slr-parser',
-    version='0.1.3',
+    version='0.1.4',
     author='Vipul Gharde',
     authon_email='vipul.gharde@gmail.com',
     description='Implementation of Simple LR (SLR) Parser for educational purposes.',
