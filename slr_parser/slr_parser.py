@@ -17,8 +17,9 @@ class SLRParser:
 
         self.first, self.follow = self.first_follow(self.G_prime)
         self.C = self.items(self.G_prime)
-        self.parse_table_symbols = list(self.G_prime.terminals) + ['$'] + list(
-            self.G_prime.nonterminals - {self.G_prime.start})
+        self.action = list(self.G_prime.terminals) + ['$']
+        self.goto = list(self.G_prime.nonterminals - {self.G_prime.start})
+        self.parse_table_symbols = self.action + self.goto
         self.parse_table = self.construct_table()
 
     def first_follow(self, G):
@@ -166,6 +167,9 @@ class SLRParser:
         def print_line():
             print(f'+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]))}')
 
+        def symbols_width(symbols):
+            return (width + 1) * len(symbols) - 1
+
         print('AUGMENTED GRAMMAR:')
 
         i = 0
@@ -197,16 +201,17 @@ class SLRParser:
 
         print('\nPARSING TABLE:')
         print(
-            f'+{"-" * width}+{"-" * ((width + 1) * len(list(self.G_prime.terminals) + ["$"]) - 1)}+{"-" * ((width + 1) * (len(self.G_prime.nonterminals) - 1) - 1)}+')
+            f'+{"-" * width}+{"-" * symbols_width(self.action)}+{"-" * symbols_width(self.goto)}+')
         print(
-            f'|{"":{width}}|{"ACTION":^{(width + 1) * len(list(self.G_prime.terminals) + ["$"]) - 1}}|{"GOTO":^{(width + 1) * (len(self.G_prime.nonterminals) - 1) - 1}}|')
-        print(f'|{"STATE":^{width}}+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]) - 1)}')
+            f'|{"":{width}}|{"ACTION":^{symbols_width(self.action)}}|{"GOTO":^{symbols_width(self.goto)}}|')
+        print(f'|{"STATE":^{width}}+{("-" * width + "+") * len(self.parse_table_symbols)}')
         print(f'|{"":^{width}}|', end=' ')
 
         for symbol in self.parse_table_symbols:
             print(f'{symbol:^{width - 1}}|', end=' ')
 
         print()
+        print(f'{symbol}' for symbol in self.parse_table_symbols)
         print_line()
 
         for r in range(len(self.C)):
