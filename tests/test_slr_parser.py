@@ -176,8 +176,22 @@ C -> h | ^"""]
 
         for i, w in enumerate(['id - id', '+ id', 'id + id * id']):
             with self.subTest(w=w):
-                self.results = self.slr_parser.LR_parser(w)
-                self.assertEqual(expected_results[i], self.results['action'][-1])
+                results = self.slr_parser.LR_parser(w)
+                self.assertEqual(expected_results[i], results['action'][-1])
+
+        grammar_strs = ["""S -> L = R | R
+L -> * R | id
+R -> L""", """E -> T | F
+T -> id
+F -> id"""]
+        expected_results = ['ERROR: shift-reduce conflict at state ', 'ERROR: reduce-reduce conflict at state ']
+
+        for i, w in enumerate(['id = id', 'id']):
+            with self.subTest(w=w):
+                G = Grammar(grammar_strs[i])
+                slr_parser = SLRParser(G)
+                results = slr_parser.LR_parser(w)
+                self.assertIn(expected_results[i], results['action'][-1])
 
 
 if __name__ == "__main__":
