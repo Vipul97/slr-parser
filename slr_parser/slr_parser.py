@@ -100,7 +100,7 @@ class SLRParser:
 
                     if body[dot_pos + 1] == X:
                         for C_head, C_bodies in self.CLOSURE(
-                                {head: [body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]]}).items():
+                            {head: [body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]]}).items():
                             goto[C_head] = C_bodies
 
         return goto
@@ -340,7 +340,7 @@ class SLRParser:
         print_line()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('grammar_file', type=argparse.FileType('r'), help='text file to be used as grammar')
     parser.add_argument('-g', action='store_true', help='generate automaton')
@@ -355,3 +355,7 @@ if __name__ == "__main__":
 
     if args.g:
         slr_parser.generate_automaton()
+
+
+if __name__ == "__main__":
+    main()

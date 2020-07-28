@@ -3,7 +3,7 @@
 Implementation of Simple LR (SLR) Parser for educational purposes.
 
 ```
->>> python -m slr_parser.slr_parser -g tests/test_grammar.txt "id + id * id"
+>>> slr -g grammar.txt "id + id * id"
 AUGMENTED GRAMMAR:
 0: E' -> E
 1:  E -> E + T
@@ -122,9 +122,21 @@ python setup.py install
 * The choice operator ``` | ``` can be used in the body of the production to match either the expression before or the expression after the operator.
 * ```^``` is treated as the null symbol.
 
-Run `slr_parser/slr_parser.py`.
+## Grammar File
+A text file containing the grammar is required. For example, the contents of a grammar file ```grammar.txt``` looks like this:
 
-    usage: slr_parser.py [-h] [-g] grammar_file tokens
+```
+E -> E + T
+E -> T
+T -> T * F | F
+F -> ( E )
+F -> id
+```
+
+## Tokens
+The tokens enclosed within double quotes are required as the input to the SLR Parser. All tokens are separated with spaces. For example, ```"id + id * id"```.
+
+    usage: slr [-h] [-g] grammar_file tokens
 
     positional arguments:
       grammar_file  text file to be used as grammar
