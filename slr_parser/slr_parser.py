@@ -100,8 +100,9 @@ class SLRParser:
                     dot_pos = body.index('.')
 
                     if body[dot_pos + 1] == X:
-                        for C_head, C_bodies in self.CLOSURE(
-                            {head: [body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]]}).items():
+                        replaced_dot_body = body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]
+
+                        for C_head, C_bodies in self.CLOSURE({head: [replaced_dot_body]}).items():
                             goto[C_head] = C_bodies
 
         return goto
