@@ -9,7 +9,7 @@ class SLRParser:
     def __init__(self, G):
         self.G_prime = Grammar(f"{G.start}' -> {G.start}\n{G.grammar_str}")
         self.max_G_prime_len = len(max(self.G_prime.grammar.keys(), key=len))
-        self.G_indexed = [['', '']]
+        self.G_indexed = []
 
         for head, bodies in self.G_prime.grammar.items():
             for body in bodies:
