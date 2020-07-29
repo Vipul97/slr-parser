@@ -212,7 +212,6 @@ class SLRParser:
             print(f'{symbol:^{width - 1}}|', end=' ')
 
         print()
-        print(f'{symbol}' for symbol in self.parse_table_symbols)
         print_line()
 
         for r in range(len(self.C)):
