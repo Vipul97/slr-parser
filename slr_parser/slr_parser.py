@@ -8,7 +8,7 @@ import argparse
 class SLRParser:
     def __init__(self, G):
         self.G_prime = Grammar(f"{G.start}' -> {G.start}\n{G.grammar_str}")
-        self.max_G_prime_len = len(max(self.G_prime.grammar.keys(), key=len))
+        self.max_G_prime_len = len(max(self.G_prime.grammar, key=len))
         self.G_indexed = []
 
         for head, bodies in self.G_prime.grammar.items():
@@ -78,12 +78,12 @@ class SLRParser:
                         if symbol_after_dot in self.G_prime.nonterminals:
                             for G_body in self.G_prime.grammar[symbol_after_dot]:
                                 if G_body == ['^']:
-                                    if symbol_after_dot not in J.keys():
+                                    if symbol_after_dot not in J:
                                         J[symbol_after_dot] = [['.']]
                                     elif ['.'] not in J[symbol_after_dot]:
                                         J[symbol_after_dot].append(['.'])
                                 else:
-                                    if symbol_after_dot not in J.keys():
+                                    if symbol_after_dot not in J:
                                         J[symbol_after_dot] = [['.'] + G_body]
                                     elif ['.'] + G_body not in J[symbol_after_dot]:
                                         J[symbol_after_dot].append(['.'] + G_body)
@@ -103,7 +103,7 @@ class SLRParser:
                         replaced_dot_body = body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]
 
                         for C_head, C_bodies in self.CLOSURE({head: [replaced_dot_body]}).items():
-                            if C_head not in goto.keys():
+                            if C_head not in goto:
                                 goto[C_head] = C_bodies
                             else:
                                 for C_body in C_bodies:
@@ -191,11 +191,11 @@ class SLRParser:
         fprint('SYMBOLS', self.G_prime.symbols)
 
         print('\nFIRST:')
-        for head in self.G_prime.grammar.keys():
+        for head in self.G_prime.grammar:
             print(f'{head:>{self.max_G_prime_len}} = {{ {", ".join(self.first[head])} }}')
 
         print('\nFOLLOW:')
-        for head in self.G_prime.grammar.keys():
+        for head in self.G_prime.grammar:
             print(f'{head:>{self.max_G_prime_len}} = {{ {", ".join(self.follow[head])} }}')
 
         width = max(len(c) for c in ['ACTION'] + list(self.G_prime.symbols)) + 2
@@ -206,10 +206,8 @@ class SLRParser:
                 width = max_len + 2
 
         print('\nPARSING TABLE:')
-        print(
-            f'+{"-" * width}+{"-" * symbols_width(self.action)}+{"-" * symbols_width(self.goto)}+')
-        print(
-            f'|{"":{width}}|{"ACTION":^{symbols_width(self.action)}}|{"GOTO":^{symbols_width(self.goto)}}|')
+        print(f'+{"-" * width}+{"-" * symbols_width(self.action)}+{"-" * symbols_width(self.goto)}+')
+        print(f'|{"":{width}}|{"ACTION":^{symbols_width(self.action)}}|{"GOTO":^{symbols_width(self.goto)}}|')
         print(f'|{"STATE":^{width}}+{("-" * width + "+") * len(self.parse_table_symbols)}')
         print(f'|{"":^{width}}|', end=' ')
 
@@ -287,7 +285,7 @@ class SLRParser:
             results['step'].append(f'({step})')
             results['input'].append(' '.join(buffer[pointer:]))
 
-            if a not in self.parse_table[s].keys():
+            if a not in self.parse_table[s]:
                 results['action'].append(f'ERROR: unrecognized symbol {a}')
 
                 break
@@ -336,7 +334,7 @@ class SLRParser:
         def print_line():
             print(f'{"".join(["+" + ("-" * (max_len + 2)) for max_len in max_lens.values()])}+')
 
-        max_lens = {key: max(len(value) for value in results[key]) for key in results.keys()}
+        max_lens = {key: max(len(value) for value in results[key]) for key in results}
         justs = {'step': '>', 'stack': '', 'symbols': '', 'input': '>', 'action': ''}
 
         print_line()
