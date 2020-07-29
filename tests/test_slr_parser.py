@@ -108,7 +108,7 @@ C -> h | ^"""]
             self.assertSetEqual({'$'}, follow['S'])
             self.assertSetEqual({'$', 'd'}, follow['A'])
             self.assertSetEqual({'$', 'd'}, follow['B'])
-            self.assertSetEqual(set([]), follow['C'])
+            self.assertSetEqual(set(), follow['C'])
 
         with self.subTest(grammar_str=grammar_strs[5]):
             G = Grammar(grammar_strs[5])

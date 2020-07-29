@@ -29,9 +29,9 @@ class SLRParser:
 
             return set_1_len != len(set_1)
 
-        first = {symbol: set([]) for symbol in G.symbols}
+        first = {symbol: set() for symbol in G.symbols}
         first.update((terminal, {terminal}) for terminal in G.terminals)
-        follow = {symbol: set([]) for symbol in G.nonterminals}
+        follow = {symbol: set() for symbol in G.nonterminals}
         follow[G.start].add('$')
 
         while True:

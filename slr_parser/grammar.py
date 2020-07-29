@@ -3,8 +3,8 @@ class Grammar:
         self.grammar_str = '\n'.join(filter(None, grammar_str.splitlines()))
         self.grammar = {}
         self.start = None
-        self.terminals = set([])
-        self.nonterminals = set([])
+        self.terminals = set()
+        self.nonterminals = set()
 
         for production in list(filter(None, grammar_str.splitlines())):
             head, _, bodies = production.partition(' -> ')
