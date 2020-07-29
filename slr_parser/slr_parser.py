@@ -103,7 +103,12 @@ class SLRParser:
                         replaced_dot_body = body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]
 
                         for C_head, C_bodies in self.CLOSURE({head: [replaced_dot_body]}).items():
-                            goto[C_head] = C_bodies
+                            if C_head not in goto.keys():
+                                goto[C_head] = C_bodies
+                            else:
+                                for C_body in C_bodies:
+                                    if C_body not in goto[C_head]:
+                                        goto[C_head].append(C_body)
 
         return goto
 
