@@ -146,7 +146,7 @@ C -> h | ^"""]
         self.assertDictEqual(
             {"E'": {('.', 'E')}, 'E': {('.', 'E', '+', 'T'), ('.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')},
              'F': {('.', '(', 'E', ')'), ('.', 'id')}},
-            self.slr_parser.CLOSURE({self.slr_parser.G_prime.start: {('.',) + (self.slr_parser.G_prime.start[:-1],)}}))
+            self.slr_parser.CLOSURE({self.slr_parser.G_prime.start: {('.', self.slr_parser.G_prime.start[:-1])}}))
 
     def test_GOTO(self):
         self.assertDictEqual({'E': {('E', '+', '.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')},
