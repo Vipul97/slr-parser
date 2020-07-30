@@ -13,20 +13,18 @@ class Grammar:
                 raise ValueError(
                     f'\'{head} -> {bodies}\': Head \'{head}\' is not capitalized to be treated as a nonterminal.')
 
-            bodies = [body.split() for body in ' '.join(bodies.split()).split('|')]
-
             if not self.start:
                 self.start = head
 
-            if head not in self.grammar:
-                self.grammar[head] = []
-                self.nonterminals.add(head)
+            self.grammar.setdefault(head, set())
+            self.nonterminals.add(head)
+            bodies = {tuple(body.split()) for body in ' '.join(bodies.split()).split('|')}
 
             for body in bodies:
-                if '^' in body and body != ['^']:
+                if '^' in body and body != ('^',):
                     raise ValueError(f'\'{head} -> {" ".join(body)}\': Null symbol \'^\' is not allowed here.')
 
-                self.grammar[head].append(body)
+                self.grammar[head].add(body)
 
                 for symbol in body:
                     if not symbol.isupper() and symbol != '^':

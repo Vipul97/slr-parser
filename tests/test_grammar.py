@@ -7,7 +7,7 @@ class TestGrammar(unittest.TestCase):
         with open('tests/test_grammar.txt') as grammar_file:
             self.G = Grammar(grammar_file.read())
             self.assertDictEqual(
-                {'E': [['E', '+', 'T'], ['T']], 'T': [['T', '*', 'F'], ['F']], 'F': [['(', 'E', ')'], ['id']]},
+                {'E': {('E', '+', 'T'), ('T',)}, 'T': {('T', '*', 'F'), ('F',)}, 'F': {('(', 'E', ')'), ('id',)}},
                 self.G.grammar)
             self.assertEqual('E', self.G.start)
             self.assertSetEqual({'+', '*', '(', ')', 'id'}, self.G.terminals)

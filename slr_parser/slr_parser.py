@@ -5,6 +5,49 @@ from slr_parser.grammar import Grammar
 import argparse
 
 
+def first_follow(G):
+    def union(set_1, set_2):
+        set_1_len = len(set_1)
+        set_1 |= set_2
+
+        return set_1_len != len(set_1)
+
+    first = {symbol: set() for symbol in G.symbols}
+    first.update((terminal, {terminal}) for terminal in G.terminals)
+    follow = {symbol: set() for symbol in G.nonterminals}
+    follow[G.start].add('$')
+
+    while True:
+        updated = False
+
+        for head, bodies in G.grammar.items():
+            for body in bodies:
+                for symbol in body:
+                    if symbol != '^':
+                        updated |= union(first[head], first[symbol] - set('^'))
+
+                        if '^' not in first[symbol]:
+                            break
+                    else:
+                        updated |= union(first[head], set('^'))
+                else:
+                    updated |= union(first[head], set('^'))
+
+                aux = follow[head]
+                for symbol in reversed(body):
+                    if symbol == '^':
+                        continue
+                    if symbol in follow:
+                        updated |= union(follow[symbol], aux - set('^'))
+                    if '^' in first[symbol]:
+                        aux = aux | first[symbol]
+                    else:
+                        aux = first[symbol]
+
+        if not updated:
+            return first, follow
+
+
 class SLRParser:
     def __init__(self, G):
         self.G_prime = Grammar(f"{G.start}' -> {G.start}\n{G.grammar_str}")
@@ -15,54 +58,12 @@ class SLRParser:
             for body in bodies:
                 self.G_indexed.append([head, body])
 
-        self.first, self.follow = self.first_follow(self.G_prime)
+        self.first, self.follow = first_follow(self.G_prime)
         self.C = self.items(self.G_prime)
         self.action = list(self.G_prime.terminals) + ['$']
         self.goto = list(self.G_prime.nonterminals - {self.G_prime.start})
         self.parse_table_symbols = self.action + self.goto
         self.parse_table = self.construct_table()
-
-    def first_follow(self, G):
-        def union(set_1, set_2):
-            set_1_len = len(set_1)
-            set_1 |= set_2
-
-            return set_1_len != len(set_1)
-
-        first = {symbol: set() for symbol in G.symbols}
-        first.update((terminal, {terminal}) for terminal in G.terminals)
-        follow = {symbol: set() for symbol in G.nonterminals}
-        follow[G.start].add('$')
-
-        while True:
-            updated = False
-
-            for head, bodies in G.grammar.items():
-                for body in bodies:
-                    for symbol in body:
-                        if symbol != '^':
-                            updated |= union(first[head], first[symbol] - set('^'))
-
-                            if '^' not in first[symbol]:
-                                break
-                        else:
-                            updated |= union(first[head], set('^'))
-                    else:
-                        updated |= union(first[head], set('^'))
-
-                    aux = follow[head]
-                    for symbol in reversed(body):
-                        if symbol == '^':
-                            continue
-                        if symbol in follow:
-                            updated |= union(follow[symbol], aux - set('^'))
-                        if '^' in first[symbol]:
-                            aux = aux | first[symbol]
-                        else:
-                            aux = first[symbol]
-
-            if not updated:
-                return first, follow
 
     def CLOSURE(self, I):
         J = I
@@ -77,16 +78,8 @@ class SLRParser:
 
                         if symbol_after_dot in self.G_prime.nonterminals:
                             for G_body in self.G_prime.grammar[symbol_after_dot]:
-                                if G_body == ['^']:
-                                    if symbol_after_dot not in J:
-                                        J[symbol_after_dot] = [['.']]
-                                    elif ['.'] not in J[symbol_after_dot]:
-                                        J[symbol_after_dot].append(['.'])
-                                else:
-                                    if symbol_after_dot not in J:
-                                        J[symbol_after_dot] = [['.'] + G_body]
-                                    elif ['.'] + G_body not in J[symbol_after_dot]:
-                                        J[symbol_after_dot].append(['.'] + G_body)
+                                J.setdefault(symbol_after_dot, set()).add(
+                                    ('.',) if G_body == ('^',) else ('.',) + G_body)
 
             if item_len == len(J):
                 return J
@@ -100,20 +93,15 @@ class SLRParser:
                     dot_pos = body.index('.')
 
                     if body[dot_pos + 1] == X:
-                        replaced_dot_body = body[:dot_pos] + [X, '.'] + body[dot_pos + 2:]
+                        replaced_dot_body = body[:dot_pos] + (X, '.') + body[dot_pos + 2:]
 
-                        for C_head, C_bodies in self.CLOSURE({head: [replaced_dot_body]}).items():
-                            if C_head not in goto:
-                                goto[C_head] = C_bodies
-                            else:
-                                for C_body in C_bodies:
-                                    if C_body not in goto[C_head]:
-                                        goto[C_head].append(C_body)
+                        for C_head, C_bodies in self.CLOSURE({head: {replaced_dot_body}}).items():
+                            goto.setdefault(C_head, set()).update(C_bodies)
 
         return goto
 
     def items(self, G_prime):
-        C = [self.CLOSURE({G_prime.start: [['.'] + [G_prime.start[:-1]]]})]
+        C = [self.CLOSURE({G_prime.start: {('.', G_prime.start[:-1])}})]
 
         while True:
             item_len = len(C)
@@ -146,7 +134,7 @@ class SLRParser:
 
                     elif body[-1] == '.' and head != self.G_prime.start:  # CASE 2 b
                         for j, (G_head, G_body) in enumerate(self.G_indexed):
-                            if G_head == head and (G_body == body[:-1] or G_body == ['^'] and body == ['.']):
+                            if G_head == head and (G_body == body[:-1] or G_body == ('^',) and body == ('.',)):
                                 for f in self.follow[head]:
                                     if parse_table[i][f]:
                                         parse_table[i][f] += '/'
@@ -178,12 +166,8 @@ class SLRParser:
 
         print('AUGMENTED GRAMMAR:')
 
-        i = 0
-        for head, bodies in self.G_prime.grammar.items():
-            for body in bodies:
-                print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{self.max_G_prime_len}} -> {" ".join(body)}')
-
-                i += 1
+        for i, (head, body) in enumerate(self.G_indexed):
+            print(f'{i:>{len(str(len(self.G_indexed) - 1))}}: {head:>{self.max_G_prime_len}} -> {" ".join(body)}')
 
         print()
         fprint('TERMINALS', self.G_prime.terminals)
@@ -198,7 +182,7 @@ class SLRParser:
         for head in self.G_prime.grammar:
             print(f'{head:>{self.max_G_prime_len}} = {{ {", ".join(self.follow[head])} }}')
 
-        width = max(len(c) for c in ['ACTION'] + list(self.G_prime.symbols)) + 2
+        width = max(len(c) for c in {'ACTION'} | self.G_prime.symbols) + 2
         for r in range(len(self.C)):
             max_len = max(len(str(c)) for c in self.parse_table[r].values())
 
@@ -234,7 +218,7 @@ class SLRParser:
         for i, I in enumerate(self.C):
             I_html = f'<<I>I</I><SUB>{i}</SUB><BR/>'
 
-            for (head, bodies) in I.items():
+            for head, bodies in I.items():
                 for body in bodies:
                     I_html += f'<I>{head:>{self.max_G_prime_len}}</I> &#8594;'
 
@@ -314,7 +298,7 @@ class SLRParser:
                 head, body = self.G_indexed[int(self.parse_table[s][a][1:])]
                 results['action'].append(f'reduce by {head} -> {" ".join(body)}')
 
-                if body != ['^']:
+                if body != ('^',):
                     stack = stack[:-len(body)]
                     symbols = symbols[:-len(body)]
 

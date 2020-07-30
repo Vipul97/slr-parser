@@ -1,5 +1,5 @@
 from slr_parser.grammar import Grammar
-from slr_parser.slr_parser import SLRParser
+from slr_parser.slr_parser import SLRParser, first_follow
 import unittest
 
 
@@ -43,7 +43,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[0]):
             G = Grammar(grammar_strs[0])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'(', 'id'}, first['E'])
             self.assertSetEqual({'(', 'id'}, first['T'])
             self.assertSetEqual({'(', 'id'}, first['F'])
@@ -53,7 +53,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[1]):
             G = Grammar(grammar_strs[1])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'(', 'id'}, first['E'])
             self.assertSetEqual({'(', 'id'}, first['T'])
             self.assertSetEqual({'(', 'id'}, first['F'])
@@ -67,7 +67,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[2]):
             G = Grammar(grammar_strs[2])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'('}, first['('])
             self.assertSetEqual({')'}, first[')'])
             self.assertSetEqual({'+'}, first['+'])
@@ -84,7 +84,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[3]):
             G = Grammar(grammar_strs[3])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'a'}, first['S'])
             self.assertSetEqual({'c'}, first['B'])
             self.assertSetEqual({'b', '^'}, first['C'])
@@ -100,7 +100,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[4]):
             G = Grammar(grammar_strs[4])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'a'}, first['S'])
             self.assertSetEqual({'a'}, first['A'])
             self.assertSetEqual({'b'}, first['B'])
@@ -112,7 +112,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[5]):
             G = Grammar(grammar_strs[5])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'(', 'a'}, first['S'])
             self.assertSetEqual({'(', 'a'}, first['L'])
             self.assertSetEqual({',', '^'}, first["L'"])
@@ -122,7 +122,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[6]):
             G = Grammar(grammar_strs[6])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'a', 'b'}, first['S'])
             self.assertSetEqual({'^'}, first['A'])
             self.assertSetEqual({'^'}, first['B'])
@@ -132,7 +132,7 @@ C -> h | ^"""]
 
         with self.subTest(grammar_str=grammar_strs[7]):
             G = Grammar(grammar_strs[7])
-            first, follow = SLRParser(G).first_follow(G)
+            first, follow = first_follow(G)
             self.assertSetEqual({'d', 'g', 'h', '^', 'b', 'a'}, first['S'])
             self.assertSetEqual({'d', 'g', 'h', '^'}, first['A'])
             self.assertSetEqual({'g', '^'}, first['B'])
@@ -144,29 +144,29 @@ C -> h | ^"""]
 
     def test_CLOSURE(self):
         self.assertDictEqual(
-            {"E'": [['.', 'E']], 'E': [['.', 'E', '+', 'T'], ['.', 'T']], 'T': [['.', 'T', '*', 'F'], ['.', 'F']],
-             'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-            self.slr_parser.CLOSURE({self.slr_parser.G_prime.start: [['.'] + [self.slr_parser.G_prime.start[:-1]]]}))
+            {"E'": {('.', 'E')}, 'E': {('.', 'E', '+', 'T'), ('.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')},
+             'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+            self.slr_parser.CLOSURE({self.slr_parser.G_prime.start: {('.',) + (self.slr_parser.G_prime.start[:-1],)}}))
 
     def test_GOTO(self):
-        self.assertDictEqual({'E': [['E', '+', '.', 'T']], 'T': [['.', 'T', '*', 'F'], ['.', 'F']],
-                              'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-                             self.slr_parser.GOTO({"E'": [['E', '.']], 'E': [['E', '.', '+', 'T']]}, '+'))
+        self.assertDictEqual({'E': {('E', '+', '.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')},
+                              'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+                             self.slr_parser.GOTO({"E'": {('E', '.')}, 'E': {('E', '.', '+', 'T')}}, '+'))
 
     def test_items(self):
-        self.assertCountEqual([{"E'": [['.', 'E']], 'E': [['.', 'E', '+', 'T'], ['.', 'T']],
-                                'T': [['.', 'T', '*', 'F'], ['.', 'F']], 'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-                               {'F': [['id', '.']]}, {"E'": [['E', '.']], 'E': [['E', '.', '+', 'T']]},
-                               {'T': [['F', '.']]}, {'E': [['T', '.']], 'T': [['T', '.', '*', 'F']]},
-                               {'F': [['(', '.', 'E', ')'], ['.', '(', 'E', ')'], ['.', 'id']],
-                                'E': [['.', 'E', '+', 'T'], ['.', 'T']], 'T': [['.', 'T', '*', 'F'], ['.', 'F']]},
-                               {'E': [['E', '+', '.', 'T']], 'T': [['.', 'T', '*', 'F'], ['.', 'F']],
-                                'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-                               {'T': [['T', '*', '.', 'F']], 'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-                               {'F': [['(', 'E', '.', ')']], 'E': [['E', '.', '+', 'T']]},
-                               {'E': [['E', '+', 'T', '.']], 'T': [['T', '.', '*', 'F']]},
-                               {'T': [['T', '*', 'F', '.']]},
-                               {'F': [['(', 'E', ')', '.']]}], self.slr_parser.items(self.slr_parser.G_prime))
+        self.assertCountEqual([{"E'": {('.', 'E')}, 'E': {('.', 'E', '+', 'T'), ('.', 'T')},
+                                'T': {('.', 'T', '*', 'F'), ('.', 'F')}, 'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+                               {'F': {('id', '.')}}, {"E'": {('E', '.')}, 'E': {('E', '.', '+', 'T')}},
+                               {'T': {('F', '.')}}, {'E': {('T', '.')}, 'T': {('T', '.', '*', 'F')}},
+                               {'F': {('(', '.', 'E', ')'), ('.', '(', 'E', ')'), ('.', 'id')},
+                                'E': {('.', 'E', '+', 'T'), ('.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')}},
+                               {'E': {('E', '+', '.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')},
+                                'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+                               {'T': {('T', '*', '.', 'F')}, 'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+                               {'F': {('(', 'E', '.', ')')}, 'E': {('E', '.', '+', 'T')}},
+                               {'E': {('E', '+', 'T', '.')}, 'T': {('T', '.', '*', 'F')}},
+                               {'T': {('T', '*', 'F', '.')}},
+                               {'F': {('(', 'E', ')', '.')}}], self.slr_parser.items(self.slr_parser.G_prime))
 
         grammar_str = """E -> E + T | E - T
 E -> T
@@ -177,29 +177,29 @@ F -> id"""
         with self.subTest(grammar_str=grammar_str):
             G = Grammar(grammar_str)
             slr_parser = SLRParser(G)
-            self.assertCountEqual([{"E'": [['.', 'E']], 'E': [['.', 'E', '+', 'T'], ['.', 'E', '-', 'T'], ['.', 'T']],
-                                    'T': [['.', 'T', '*', 'F'], ['.', 'T', '/', 'F'], ['.', 'F']],
-                                    'F': [['.', '(', 'E', ')'], ['.', 'id']]}, {'F': [['id', '.']]},
-                                   {'T': [['F', '.']]},
-                                   {'E': [['T', '.']], 'T': [['T', '.', '*', 'F'], ['T', '.', '/', 'F']]},
-                                   {'F': [['(', '.', 'E', ')'], ['.', '(', 'E', ')'], ['.', 'id']],
-                                    'E': [['.', 'E', '+', 'T'], ['.', 'E', '-', 'T'], ['.', 'T']],
-                                    'T': [['.', 'T', '*', 'F'], ['.', 'T', '/', 'F'], ['.', 'F']]},
-                                   {"E'": [['E', '.']], 'E': [['E', '.', '+', 'T'], ['E', '.', '-', 'T']]},
-                                   {'T': [['T', '/', '.', 'F']], 'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-                                   {'T': [['T', '*', '.', 'F']], 'F': [['.', '(', 'E', ')'], ['.', 'id']]},
-                                   {'F': [['(', 'E', '.', ')']], 'E': [['E', '.', '+', 'T'], ['E', '.', '-', 'T']]},
-                                   {'E': [['E', '+', '.', 'T']],
-                                    'T': [['.', 'T', '*', 'F'], ['.', 'T', '/', 'F'], ['.', 'F']],
-                                    'F': [['.', '(', 'E', ')'], ['.', 'id']]}, {'E': [['E', '-', '.', 'T']],
-                                                                                'T': [['.', 'T', '*', 'F'],
-                                                                                      ['.', 'T', '/', 'F'], ['.', 'F']],
-                                                                                'F': [['.', '(', 'E', ')'],
-                                                                                      ['.', 'id']]},
-                                   {'T': [['T', '/', 'F', '.']]}, {'T': [['T', '*', 'F', '.']]},
-                                   {'F': [['(', 'E', ')', '.']]},
-                                   {'E': [['E', '+', 'T', '.']], 'T': [['T', '.', '*', 'F'], ['T', '.', '/', 'F']]},
-                                   {'E': [['E', '-', 'T', '.']], 'T': [['T', '.', '*', 'F'], ['T', '.', '/', 'F']]}],
+            self.assertCountEqual([{"E'": {('.', 'E')}, 'E': {('.', 'E', '+', 'T'), ('.', 'E', '-', 'T'), ('.', 'T')},
+                                    'T': {('.', 'T', '*', 'F'), ('.', 'T', '/', 'F'), ('.', 'F')},
+                                    'F': {('.', '(', 'E', ')'), ('.', 'id')}}, {'F': {('id', '.')}},
+                                   {'T': {('F', '.')}},
+                                   {'E': {('T', '.')}, 'T': {('T', '.', '*', 'F'), ('T', '.', '/', 'F')}},
+                                   {'F': {('(', '.', 'E', ')'), ('.', '(', 'E', ')'), ('.', 'id')},
+                                    'E': {('.', 'E', '+', 'T'), ('.', 'E', '-', 'T'), ('.', 'T')},
+                                    'T': {('.', 'T', '*', 'F'), ('.', 'T', '/', 'F'), ('.', 'F')}},
+                                   {"E'": {('E', '.')}, 'E': {('E', '.', '+', 'T'), ('E', '.', '-', 'T')}},
+                                   {'T': {('T', '/', '.', 'F')}, 'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+                                   {'T': {('T', '*', '.', 'F')}, 'F': {('.', '(', 'E', ')'), ('.', 'id')}},
+                                   {'F': {('(', 'E', '.', ')')}, 'E': {('E', '.', '+', 'T'), ('E', '.', '-', 'T')}},
+                                   {'E': {('E', '+', '.', 'T')},
+                                    'T': {('.', 'T', '*', 'F'), ('.', 'T', '/', 'F'), ('.', 'F')},
+                                    'F': {('.', '(', 'E', ')'), ('.', 'id')}}, {'E': {('E', '-', '.', 'T')},
+                                                                                'T': {('.', 'T', '*', 'F'),
+                                                                                      ('.', 'T', '/', 'F'), ('.', 'F')},
+                                                                                'F': {('.', '(', 'E', ')'),
+                                                                                      ('.', 'id')}},
+                                   {'T': {('T', '/', 'F', '.')}}, {'T': {('T', '*', 'F', '.')}},
+                                   {'F': {('(', 'E', ')', '.')}},
+                                   {'E': {('E', '+', 'T', '.')}, 'T': {('T', '.', '*', 'F'), ('T', '.', '/', 'F')}},
+                                   {'E': {('E', '-', 'T', '.')}, 'T': {('T', '.', '*', 'F'), ('T', '.', '/', 'F')}}],
                                   slr_parser.items(slr_parser.G_prime))
 
     def test_construct_table(self):
