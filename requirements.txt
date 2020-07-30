@@ -4,5 +4,5 @@ watchdog
 flake8
 tox
 coverage
-graphviz
 twine
+graphviz
