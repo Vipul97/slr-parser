@@ -3,7 +3,7 @@
 Implementation of Simple LR (SLR) Parser for educational purposes.
 
 ```
->>> slr -g grammar.txt "id + id * id"
+$ slr -g grammar.txt "id + id * id"
 AUGMENTED GRAMMAR:
 0: E' -> E
 1:  E -> E + T
