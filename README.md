@@ -1,4 +1,4 @@
-# SLR Parser [![codecov](https://codecov.io/gh/Vipul97/slr-parser/branch/master/graph/badge.svg)](https://codecov.io/gh/Vipul97/slr-parser) [![Build Status](https://travis-ci.org/Vipul97/slr-parser.svg?branch=master)](https://travis-ci.org/Vipul97/slr-parser) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+# SLR Parser [![codecov](https://codecov.io/gh/Vipul97/slr-parser/branch/master/graph/badge.svg)](https://codecov.io/gh/Vipul97/slr-parser) [![Build Status](https://travis-ci.com/Vipul97/slr-parser.svg?branch=master)](https://travis-ci.com/Vipul97/slr-parser) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Implementation of Simple LR (SLR) Parser for educational purposes.
 
