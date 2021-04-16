@@ -148,6 +148,15 @@ C -> h | ^"""]
              'F': {('.', '(', 'E', ')'), ('.', 'id')}},
             self.slr_parser.CLOSURE({self.slr_parser.G_prime.start: {('.', self.slr_parser.G_prime.start[:-1])}}))
 
+        grammar_str = """E -> + E"""
+
+        with self.subTest(grammar_str=grammar_str):
+            G = Grammar(grammar_str)
+            slr_parser = SLRParser(G)
+
+            self.assertDictEqual({'E': {('.', '+', 'E')}, "E'": {('.', 'E')}},
+                                 slr_parser.CLOSURE({slr_parser.G_prime.start: {('.', slr_parser.G_prime.start[:-1])}}))
+
     def test_GOTO(self):
         self.assertDictEqual({'E': {('E', '+', '.', 'T')}, 'T': {('.', 'T', '*', 'F'), ('.', 'F')},
                               'F': {('.', '(', 'E', ')'), ('.', 'id')}},
