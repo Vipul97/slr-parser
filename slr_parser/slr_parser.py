@@ -108,8 +108,10 @@ class SLRParser:
 
             for I in C.copy():
                 for X in G_prime.symbols:
-                    if self.GOTO(I, X) and self.GOTO(I, X) not in C:
-                        C.append(self.GOTO(I, X))
+                    goto = self.GOTO(I, X)
+
+                    if goto and goto not in C:
+                        C.append(goto)
 
             if item_len == len(C):
                 return C
