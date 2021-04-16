@@ -72,7 +72,7 @@ class SLRParser:
             item_len = len(J)
 
             for head, bodies in J.copy().items():
-                for body in bodies:
+                for body in bodies.copy():
                     if '.' in body[:-1]:
                         symbol_after_dot = body[body.index('.') + 1]
 
