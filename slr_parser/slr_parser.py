@@ -156,7 +156,7 @@ class SLRParser:
 
     def print_info(self):
         def fprint(text, variable):
-            print(f'{text:>13}: {", ".join(variable)}')
+            print(f'{text:>12}: {", ".join(variable)}')
 
         def print_line():
             print(f'+{("-" * width + "+") * (len(list(self.G_prime.symbols) + ["$"]))}')

@@ -13,9 +13,9 @@ AUGMENTED GRAMMAR:
 5:  F -> ( E )
 6:  F -> id
 
-    TERMINALS: ), id, +, *, (
- NONTERMINALS: E, F, E', T
-      SYMBOLS: ), E, id, +, T, *, F, E', (
+   TERMINALS: ), id, +, *, (
+NONTERMINALS: E, F, E', T
+     SYMBOLS: ), E, id, +, T, *, F, E', (
 
 FIRST:
 E' = { id, ( }
