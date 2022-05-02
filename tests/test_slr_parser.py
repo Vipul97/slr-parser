@@ -237,5 +237,5 @@ F -> id"""]
                 self.assertIn(expected_results[i], results['action'][-1])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

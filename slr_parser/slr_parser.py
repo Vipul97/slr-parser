@@ -351,5 +351,5 @@ def main():
         slr_parser.generate_automaton()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
