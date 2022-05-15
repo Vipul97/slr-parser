@@ -222,15 +222,15 @@ class SLRParser:
 
             for head, bodies in I.items():
                 for body in bodies:
-                    I_html += f'<I>{head:>{self.max_G_prime_len}}</I> &#8594;'
+                    I_html += f'<I>{head:>{self.max_G_prime_len}}</I> &#8594; '
 
                     for symbol in body:
                         if symbol in self.G_prime.nonterminals:
-                            I_html += f' <I>{symbol}</I>'
+                            I_html += f'<I>{symbol}</I>'
                         elif symbol in self.G_prime.terminals:
-                            I_html += f' <B>{symbol}</B>'
+                            I_html += f'<B>{symbol}</B>'
                         else:
-                            I_html += f' {symbol}'
+                            I_html += f'{symbol}'
 
                     I_html += '<BR ALIGN="LEFT"/>'
 
@@ -261,8 +261,13 @@ class SLRParser:
         a = buffer[pointer]
         stack = ['0']
         symbols = ['']
-        results = {'step': [''], 'stack': ['STACK'] + stack, 'symbols': ['SYMBOLS'] + symbols, 'input': ['INPUT'],
-                   'action': ['ACTION']}
+        results = {
+            'step': [''],
+            'stack': ['STACK'] + stack,
+            'symbols': ['SYMBOLS'] + symbols,
+            'input': ['INPUT'],
+            'action': ['ACTION']
+        }
 
         step = 0
         while True:
@@ -321,7 +326,13 @@ class SLRParser:
             print(f'{"".join(["+" + ("-" * (max_len + 2)) for max_len in max_lens.values()])}+')
 
         max_lens = {key: max(len(value) for value in results[key]) for key in results}
-        justs = {'step': '>', 'stack': '', 'symbols': '', 'input': '>', 'action': ''}
+        justs = {
+            'step': '>',
+            'stack': '',
+            'symbols': '',
+            'input': '>',
+            'action': ''
+        }
 
         print_line()
         print(''.join(
