@@ -78,7 +78,7 @@ PARSING TABLE:
 
 ## Requirements
 
-* Python 3.10+
+* Python 3.11+
 
 ## Stable release
 
