@@ -81,7 +81,7 @@ Before you submit a pull request, check that it meets these guidelines:
 
 1.  The pull request should include tests.
 2.  If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring.
-3.  The pull request should work for Python 3.6, 3.7, 3.8, 3.9, 3.10, 3.11 and 3.12.
+3.  The pull request should work for Python 3.7, 3.8, 3.9, 3.10, 3.11 and 3.12.
 
 ## Tips
 
