@@ -23,12 +23,11 @@ setup(
         'Operating System :: POSIX',
         'Operating System :: Unix',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
         'Topic :: Scientific/Engineering',
         'Topic :: Software Development'
     ],
-    python_requires='>=3.11',
+    python_requires='>=3.12',
     entry_points={
         'console_scripts': [
             'slr=slr_parser.slr_parser:main',
