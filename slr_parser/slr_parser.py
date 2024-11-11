@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from graphviz import Digraph
-from grammar import Grammar
+from slr_parser.grammar import Grammar
 import argparse
 
 
