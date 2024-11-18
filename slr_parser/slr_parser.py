@@ -230,8 +230,7 @@ class SLRParser:
 
                 if 's' in cell:
                     i = cell.split('s')[1].split('/')[0]
-                    label = f'<<B>{c}</B>>' if c in self.G_prime.terminals else c
-                    automaton.edge(f'I{r}', f'I{i}', label=label)
+                    automaton.edge(f'I{r}', f'I{i}', label=f'<<B>{c}</B>>')
 
                 elif cell == 'acc':
                     automaton.node('acc', '<<B>accept</B>>', shape='none')
