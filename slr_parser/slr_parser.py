@@ -49,7 +49,6 @@ def first_follow(G):
 class SLRParser:
     def __init__(self, G):
         self.G_prime = Grammar(f"{G.start}' -> {G.start}\n{G.grammar_str}")
-        self.max_nonterminal_len = max(len(nonterminal) for nonterminal in self.G_prime.nonterminals)
         self.G_indexed = [
             {'head': head, 'body': body}
             for head, bodies in self.G_prime.grammar.items()
@@ -57,10 +56,9 @@ class SLRParser:
         ]
         self.first, self.follow = first_follow(self.G_prime)
         self.C = self.items(self.G_prime)
-        self.action = list(self.G_prime.terminals) + ['$']
-        self.goto = self.G_prime.nonterminals - {self.G_prime.start}
-        self.parsing_table_symbols = self.action + list(self.goto)
         self.parsing_table = self.construct_parsing_table()
+        self.action_symbols = list(self.G_prime.terminals) + ['$']
+        self.max_nonterminal_len = max(len(nonterminal) for nonterminal in self.G_prime.nonterminals)
 
     def CLOSURE(self, I):
         J = I.copy()
@@ -109,39 +107,42 @@ class SLRParser:
                 return C
 
     def construct_parsing_table(self):
-        parsing_table = {r: {c: '' for c in self.parsing_table_symbols} for r in range(len(self.C))}
+        parsing_table = {}
 
-        for i, I in enumerate(self.C):
-            for j, dot_pos in I:
-                head = self.G_indexed[j]['head']
-                body = self.G_indexed[j]['body']
+        for s, I in enumerate(self.C):
+            parsing_table[s] = {}
+
+            for i, dot_pos in I:
+                head = self.G_indexed[i]['head']
+                body = self.G_indexed[i]['body']
                 body = [] if body == ['^'] else body
 
                 if dot_pos < len(body):  # CASE 2a: Symbol after dot
                     symbol_after_dot = body[dot_pos]
                     if symbol_after_dot in self.G_prime.terminals:
-                        j = self.GOTO(I, symbol_after_dot)
-                        s = f's{self.C.index(j)}'
+                        i = self.GOTO(I, symbol_after_dot)
+                        action = f's{self.C.index(i)}'
 
-                        if s not in parsing_table[i][symbol_after_dot]:
-                            if 'r' in parsing_table[i][symbol_after_dot]:
-                                parsing_table[i][symbol_after_dot] += '/'
-                            parsing_table[i][symbol_after_dot] += s
+                        if symbol_after_dot in parsing_table[s] and s not in parsing_table[s][symbol_after_dot]:
+                            parsing_table[s][symbol_after_dot] += f'/{action}'
+                        else:
+                            parsing_table[s][symbol_after_dot] = action
 
                 elif dot_pos == len(body):  # CASE 2b: Dot is at the end
                     if head != self.G_prime.start:
                         for a in self.follow[head]:
-                            if parsing_table[i][a]:
-                                parsing_table[i][a] += '/'
-                            parsing_table[i][a] += f'r{j}'
+                            if a in parsing_table[s] and f'r{i}' not in parsing_table[s][a]:
+                                parsing_table[s][a] += f'/r{i}'
+                            else:
+                                parsing_table[s][a] = f'r{i}'
                     else:  # CASE 2c: If it's the start production
-                        parsing_table[i]['$'] = 'acc'
+                        parsing_table[s]['$'] = 'acc'
 
             # CASE 3: Handle the transitions for non-terminals
             for A in self.G_prime.nonterminals:
                 j = self.GOTO(I, A)
                 if j in self.C:
-                    parsing_table[i][A] = str(self.C.index(j))
+                    parsing_table[s][A] = self.C.index(j)
 
         return parsing_table
 
@@ -150,10 +151,13 @@ class SLRParser:
             print(f'{text:>12}: {", ".join(variable)}')
 
         def print_line():
-            print(f'+{("-" * width + "+") * ((len(self.parsing_table_symbols)) + 1)}')
+            print(f'+{("-" * width + "+") * ((len(parsing_table_symbols)) + 1)}')
 
         def symbols_width(symbols):
             return (width + 1) * len(symbols) - 1
+
+        goto_symbols = self.G_prime.nonterminals - {self.G_prime.start}
+        parsing_table_symbols = self.action_symbols + list(goto_symbols)
 
         print('AUGMENTED GRAMMAR:')
         for i, production in enumerate(self.G_indexed):
@@ -173,27 +177,28 @@ class SLRParser:
         for head in self.G_prime.grammar:
             print(f'{head:>{self.max_nonterminal_len}} = {{ {", ".join(self.follow[head])} }}')
 
-        width = max(len(c) for c in {'ACTION'} | self.G_prime.symbols) + 2
-        for r in range(len(self.C)):
-            max_len = max(len(str(c)) for c in self.parsing_table[r].values())
+        width = max(len(entry) for entry in {'ACTION'} | self.G_prime.symbols) + 2
+        for s in self.parsing_table:
+            max_len = max(len(str(entry)) for entry in self.parsing_table[s].values())
             width = max(width, max_len + 2)
 
         print('\nPARSING TABLE:')
         print_line()
-        print(f'|{"":{width}}|{"ACTION":^{symbols_width(self.action)}}|{"GOTO":^{symbols_width(self.goto)}}|')
-        print(f'|{"STATE":^{width}}+{("-" * width + "+") * len(self.parsing_table_symbols)}')
+        print(
+            f'|{"":{width}}|{"ACTION":^{symbols_width(self.action_symbols)}}|{"GOTO":^{symbols_width(goto_symbols)}}|')
+        print(f'|{"STATE":^{width}}+{("-" * width + "+") * len(parsing_table_symbols)}')
         print(f'|{"":^{width}}|', end=' ')
 
-        for symbol in self.parsing_table_symbols:
+        for symbol in parsing_table_symbols:
             print(f'{symbol:^{width - 1}}|', end=' ')
 
         print()
         print_line()
 
-        for r in range(len(self.C)):
-            print(f'|{r:^{width}}|', end=' ')
-            for c in self.parsing_table_symbols:
-                print(f'{self.parsing_table[r][c]:^{width - 1}}|', end=' ')
+        for s in self.parsing_table:
+            print(f'|{s:^{width}}|', end=' ')
+            for symbol in parsing_table_symbols:
+                print(f'{self.parsing_table[s].get(symbol, ''):^{width - 1}}|', end=' ')
             print()
 
         print_line()
@@ -209,12 +214,12 @@ class SLRParser:
                 return f'<B>{symbol}</B>'
             return symbol
 
-        for i, I in enumerate(self.C):
-            I_html_parts = [f'<<I>I</I><SUB>{i}</SUB><BR/>']
+        for s in self.parsing_table:
+            I_html_parts = [f'<<I>I</I><SUB>{s}</SUB><BR/>']
 
-            for j, dot_pos in I:
-                head = self.G_indexed[j]['head']
-                body = self.G_indexed[j]['body'].copy()
+            for i, dot_pos in self.C[s]:
+                head = self.G_indexed[i]['head']
+                body = self.G_indexed[i]['body'].copy()
                 body = [] if body == ['^'] else body
                 body.insert(dot_pos, '.')
                 I_html_parts.append(f'<I>{head:>{self.max_nonterminal_len}}</I> &#8594; ')
@@ -222,22 +227,17 @@ class SLRParser:
                 I_html_parts.append('<BR ALIGN="LEFT"/>')
 
             I_html = ''.join(I_html_parts)
-            automaton.node(f'I{i}', f'{I_html}>')
+            automaton.node(f'I{s}', f'{I_html}>')
 
-        for r in range(len(self.C)):
-            for c in self.parsing_table_symbols:
-                cell = self.parsing_table[r][c]
-
-                if 's' in cell:
-                    i = cell.split('s')[1].split('/')[0]
-                    automaton.edge(f'I{r}', f'I{i}', label=f'<<B>{c}</B>>')
-
-                elif cell == 'acc':
+            for symbol, entry in self.parsing_table[s].items():
+                if isinstance(entry, int):
+                    automaton.edge(f'I{s}', f'I{entry}', label=f'<<I>{symbol}</I>>')
+                elif 's' in entry:
+                    j = entry.split('s')[1].split('/')[0]
+                    automaton.edge(f'I{s}', f'I{j}', label=f'<<B>{symbol}</B>>')
+                elif entry == 'acc':
                     automaton.node('acc', '<<B>accept</B>>', shape='none')
-                    automaton.edge(f'I{r}', 'acc', label='$')
-
-                elif cell.isnumeric():
-                    automaton.edge(f'I{r}', f'I{cell}', label=f'<<I>{c}</I>>')
+                    automaton.edge(f'I{s}', 'acc', label='$')
 
         automaton.view()
 
@@ -262,11 +262,11 @@ class SLRParser:
             results['step'].append(f'({step})')
             results['input'].append(' '.join(buffer[pointer:]))
 
-            if a not in self.parsing_table[s]:
+            if a not in self.action_symbols:
                 results['action'].append(f'ERROR: unrecognized symbol {a}')
                 break
 
-            action = self.parsing_table[s][a]
+            action = self.parsing_table[s].get(a, '')
 
             if not action:
                 results['action'].append('ERROR: input cannot be parsed by given grammar')
