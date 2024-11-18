@@ -123,16 +123,18 @@ class SLRParser:
                         i = self.GOTO(I, symbol_after_dot)
                         action = f's{self.C.index(i)}'
 
-                        if symbol_after_dot in parsing_table[s] and s not in parsing_table[s][symbol_after_dot]:
-                            parsing_table[s][symbol_after_dot] += f'/{action}'
+                        if symbol_after_dot in parsing_table[s]:
+                            if action not in parsing_table[s][symbol_after_dot]:
+                                parsing_table[s][symbol_after_dot] += f'/{action}'
                         else:
                             parsing_table[s][symbol_after_dot] = action
 
                 elif dot_pos == len(body):  # CASE 2b: Dot is at the end
                     if head != self.G_prime.start:
                         for a in self.follow[head]:
-                            if a in parsing_table[s] and f'r{i}' not in parsing_table[s][a]:
-                                parsing_table[s][a] += f'/r{i}'
+                            if a in parsing_table[s]:
+                                if f'r{i}' not in parsing_table[s][a]:
+                                    parsing_table[s][a] += f'/r{i}'
                             else:
                                 parsing_table[s][a] = f'r{i}'
                     else:  # CASE 2c: If it's the start production
