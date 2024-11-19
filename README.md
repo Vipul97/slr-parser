@@ -53,19 +53,19 @@ PARSING TABLE:
 |      |  STACK   | SYMBOLS |     INPUT      |        ACTION        |
 +------+----------+---------+----------------+----------------------+
 |  (1) | 0        |         | id * id + id $ | shift                |
-|  (2) | 0 2      |  id     |    * id + id $ | reduce by F -> id    |
-|  (3) | 0 4      |  F      |    * id + id $ | reduce by T -> F     |
-|  (4) | 0 3      |  T      |    * id + id $ | shift                |
-|  (5) | 0 3 7    |  T *    |      id + id $ | shift                |
-|  (6) | 0 3 7 2  |  T * id |         + id $ | reduce by F -> id    |
-|  (7) | 0 3 7 10 |  T * F  |         + id $ | reduce by T -> T * F |
-|  (8) | 0 3      |  T      |         + id $ | reduce by E -> T     |
-|  (9) | 0 1      |  E      |         + id $ | shift                |
-| (10) | 0 1 6    |  E +    |           id $ | shift                |
-| (11) | 0 1 6 2  |  E + id |              $ | reduce by F -> id    |
-| (12) | 0 1 6 4  |  E + F  |              $ | reduce by T -> F     |
-| (13) | 0 1 6 9  |  E + T  |              $ | reduce by E -> E + T |
-| (14) | 0 1      |  E      |              $ | accept               |
+|  (2) | 0 2      | id      |    * id + id $ | reduce by F -> id    |
+|  (3) | 0 4      | F       |    * id + id $ | reduce by T -> F     |
+|  (4) | 0 3      | T       |    * id + id $ | shift                |
+|  (5) | 0 3 7    | T *     |      id + id $ | shift                |
+|  (6) | 0 3 7 2  | T * id  |         + id $ | reduce by F -> id    |
+|  (7) | 0 3 7 10 | T * F   |         + id $ | reduce by T -> T * F |
+|  (8) | 0 3      | T       |         + id $ | reduce by E -> T     |
+|  (9) | 0 1      | E       |         + id $ | shift                |
+| (10) | 0 1 6    | E +     |           id $ | shift                |
+| (11) | 0 1 6 2  | E + id  |              $ | reduce by F -> id    |
+| (12) | 0 1 6 4  | E + F   |              $ | reduce by T -> F     |
+| (13) | 0 1 6 9  | E + T   |              $ | reduce by E -> E + T |
+| (14) | 0 1      | E       |              $ | accept               |
 +------+----------+---------+----------------+----------------------+
 ```
 
