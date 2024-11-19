@@ -120,8 +120,8 @@ class SLRParser:
                 if dot_pos < len(body):  # CASE 2a: Symbol after dot
                     symbol_after_dot = body[dot_pos]
                     if symbol_after_dot in self.G_prime.terminals:
-                        i = self.GOTO(I, symbol_after_dot)
-                        action = f's{self.C.index(i)}'
+                        j = self.GOTO(I, symbol_after_dot)
+                        action = f's{self.C.index(j)}'
 
                         if symbol_after_dot in parsing_table[s]:
                             if action not in parsing_table[s][symbol_after_dot]:
