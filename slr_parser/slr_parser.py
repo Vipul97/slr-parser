@@ -283,7 +283,7 @@ class SLRParser:
                 stack.append(action[1:])
                 symbols.append(a)
                 results['stack'].append(' '.join(stack))
-                results['symbols'].append(' '.join(symbols))
+                results['symbols'].append(' '.join(symbols[1:]))
                 results['action'].append('shift')
                 pointer += 1
                 a = buffer[pointer]
@@ -300,7 +300,7 @@ class SLRParser:
                 stack.append(str(self.parsing_table[int(stack[-1])][head]))
                 symbols.append(head)
                 results['stack'].append(' '.join(stack))
-                results['symbols'].append(' '.join(symbols))
+                results['symbols'].append(' '.join(symbols[1:]))
                 results['action'].append(f'reduce by {head} -> {" ".join(body)}')
 
             elif action == 'acc':
